@@ -1,0 +1,513 @@
+1.  linux 相關設置
+      
+       1>  時間設置：
+              系統時間相關 （ Linux时钟分为系统时钟（System Clock）和硬件（Real Time Clock，简称RTC）时钟）                 
+                1.  查看當前系统时间    # date
+                2.  查看硬件时间    # hwclock  --show
+                3.  查看時間同步狀態    # ntpstat
+                4.  查看ntp 服務器的相關信息    # ntpq -p
+                5.  查看系統當前的時區    # cat /etc/localtime
+                6.  設置時區timedatectl set-timezone 'Asia/Shanghai'
+                  
+                7.  修改時區  #cp /usr/share/zoneinfo/Asia/Shanghai  /etc/localtime
+                8.  臨時修改系統當前的時間
+                     1> date  -s "20100405 14:31:00"
+                     2> ntpdate  10.67.50.111 / 10.191.131.131  (同步服務器上的時間)
+                9.   時間同步設置  
+                     1> vi /etc/ntp.conf  （配置ntp服務器）（ 10.67.50.111  是天津的ntp server ，同步該server 時間即可）
+                     2>  hwclock -s (硬件時間同步到系統時間)
+                     3>  hwclock -w (系統時間同步到硬件時間)                               
+                #10. 附加知識點 ：命令 ntpstat
+                       remote   - 本机和上层ntp的ip或主机名，“+”表示优先，“*”表示次优先          refid    - 参考上一层ntp主机地址
+                       st       - stratum阶层     when     - 多少秒前曾经同步过时间         poll     - 下次更新在多少秒后     reach    - 已经向上层ntp服务器要求更新的次数    delay    - 网络延迟    offset   - 时间补偿            jitter   - 系统时间与bios时间差
+
+       2>  網卡的設置
+               onboot=yes ---讓網絡服務啟動時使用該網卡；
+               bootproto=dhcp ---讓網卡從DHCP服務器自動獲取IP 地址
+
+       3>  yum 源配置
+              curl -o local.repo  http://10.67.51.164/repofile/centos7.repo 將 url 中文件的內容輸出到本地 文件
+              查找可用的源 yum repolist
+              刪除衝突yum -y remove mariadb-libs-5.5.56*
+              local.repo: 这个源文件的名字[local]，必须是独一无二的，不能和其他源文件冲突
+              name=local，对于[local]的具体描述，这个可以根据具体使用描述
+              baseurl=url 这个是非常重要的一环，表明了repositry的地址，支持ftp协议，http协议和file协议；
+              enabled=0/1：只有两个值，为1时表示repositry可以获取，0表示关闭
+              gpgcheck=0/1：有1和0两个选择，分别代表是否是否进行gpg校验，如果没有这一项，默认是检查的
+              gpgkey=url 后面接的是gpgkey的地址，如果前面定义gpgcheck=1的话gpgkey=url：
+
+        4>  linux 修改文件權限，用戶組，文件所有者
+               1. chmod (用于改变文件或目录的访问权限)  如果是修改文件夹及子文件夹权限可以用  chmod -R 777 /var/home/userid/cc
+                    r  (Read，读取，权限值为4)
+                    w  (Write,写入，权限值为2)
+                    x   (eXecute，执行，权限值为1)
+              2. chgrp (更改某个文件或目录的属主和属组)  參數（-R）
+              3. chown 更改某个文件或目录的属主和属组
+              4. 創建組 groupadd  組名           創建 user  adduser -g mysql mysql 
+              5. usermod -a -G wheel dbadmin 將dbadmin 加入到管理員組  
+              6. id dbadmin 查看用戶所屬組
+                  passwd -S xxx //查看xxx账户状态，是否被锁定；
+                   usermod -L xxx //锁定xxx账号
+        5>  linux 文本處理和查看
+                1. 文本處理
+                     => 輸出不重複的行   sort -n 文件名稱|uniq  實際內容不刪除，只排序輸出
+                     => 輸出行與行之間的內容   sed -n '行號1，行號2p' 文件名稱
+                     => 替換文本的內容   sed -i 's/原字符串/新字符串/'  文件名稱
+
+                2. 文本查看
+
+                     => find命令         
+
+　　　   　        1.按照文件名查找
+                               find . -name 'srm*' 或文件名稱  #表示当前目录下查找文件名开头是字符串‘srm’的文件
+
+　　　  　         2.按照文件特征查找 　　　　
+                               find / -size +10000c　　#查找出大于10000000字节的文件(c:字节，w:双字，k:KB，M:MB，G:GB)
+                               find / -size -1000k 　　#查找出小于1000KB的文件
+
+　　　 　          3.使用混合查找方式查找文件
+                            　参数有： ！，-and(-a)，-or(-o)
+　　    　            　(1)find /tmp -size +10000c -and -mtime +2 　
+   　　                     (2)find / -user fred -or -user george 　　#在/目录下查找用户是fred或者george的文件文件
+   　                 　    (3)find /tmp ! -user panda　　#在/tmp目录中查找所有不属于panda用户的文件
+    　　  
+                     => grep命令
+
+   　                 　    (1)grep 'test' d*　　#显示所有以d开头的文件中包含 test的行
+   　                 　    (2)grep ‘test’ aa bb cc 　　 #显示在aa，bb，cc文件中包含test的行
+   　                 　    (3)grep ‘[a-z]\{5\}’ aa 　　#显示所有包含每行字符串至少有5个连续小写字符的字符串的行
+   　                 　    (4)grep magic /usr/src　　#显示/usr/src目录下的文件(不含子目录)包含magic的行
+   　                 　    (5)grep -r magic /usr/src　　#显示/usr/src目录下的文件(包含子目录)包含magic的行
+   　                 　    (6)grep -w pattern files ：只匹配整个单词，而不是字符串的一部分(如匹配’magic’，而不是’magical’)
+
+        6>  Linux-压缩解压缩与打包解包
+
+                1.  压缩解压缩
+                     => gzip 压缩后的文件是.gz格式
+                             压缩：    gzip 文件名 或  gzip -r 目录
+                             解压缩：gunzip 压缩文件 或 gzip -d 压缩文件
+        
+                     => zip 压缩后的文件为.zip格式（压缩、解压缩都保留原文件）
+                              压缩：zip 压缩文件 源文件1 源文件2 ….
+                              解压缩：unzip 压缩后的文件
+
+                     =>  bzip2 压缩后的扩展名是.bz2
+                             压缩：bzip2 文件名
+                             解压缩：bunzip2 压缩文件 或 bzip2 -d 压缩文件
+
+                2.  打包、解包指令 
+                      将a、b、c、d这四个文件打包成一个文件：file.tar
+                      打包  tar -cvf file.tar a b c d
+                      解包  tar -xvf file.tar
+
+                3.  打包同时进行压缩
+                     打包壓縮    tar -zcvf file.tar.gz a b c d
+                     解包解壓縮tar -zxvf file.tar.gz
+
+                4.  查看tar包
+                      tar -tf file.tar
+
+        7>  linux 軟連接和硬鏈接
+                1. 概念：      
+                     用户数据 (user data) -->(data block)    
+                     元数据 (metadata) -->(文件的附加属性，如文件大小、创建时间、所有者等信息, inode索引节点号,才是文件的唯一标识而非文件名
+                     文件名 --> inode |   data block
+                              Metadata           user data
+                     查詢元數據節點inode  ll -i/ls -i
+        
+                2. 硬鏈接特性  link oldfile newfile   / ln oldfile newfile
+                   文件有相同的 inode 及 data block；
+                   只能对已存在的文件进行创建；
+                   不能交叉文件系统进行硬链接的创建；(命令查看文件系統 df -i --print-type <=>等價于  df  -T -h)
+                   不能对目录进行创建，只可对文件创建；
+                   删除一个硬链接文件并不影响其他有相同 inode 号的文件。
+       
+                3.軟連接特性： ln -s oldfile newfile
+                   软链接有自己的文件属性及权限等；
+                   可对不存在的文件或目录创建软链接；
+                   软链接可交叉文件系统；
+                   软链接可对文件或目录创建；
+                   创建软链接时，链接计数 i_nlink 不会增加；
+                   删除软链接并不影响被指向的文件，但若被指向的原文件被删除，则相关软连接被称为死链接;
+
+        8>  linux 設置時間格式
+                export TIME_STYLE='+%Y-%m-%d %H:%M:%S'
+
+        9> linux ls/ll 顯示排序
+                1. 按照時間排序  升序/降序    ll -rt / ll -t 
+                2. 按照文件大小排序 升序/降序 ll -rSh / ll -Sh
+
+        10> linux 追加內容
+			1. 追加字符串 echo "字符串" >> 文件
+			2. 追加文件到文件，文件內容疊加 cat 文件a >>文件b
+ 
+        11> linux 防火墻設置
+			centos6 :iptables  需安裝新版本，不然無法啟動。yum install iptables-services
+			centos7:firewalld 
+        12>	SWAP 交換空間設置
+			查看交換空間配置：cat /proc/sys/vm/swappiness 默認為60 ( 可以臨時修改，系統重啟失效)，永久修改 /etc/sysctl.conf  加入vm.swappiness=10
+			swappiness=0的时候表示最大限度使用物理内存，然后才是 swap空间
+			swappiness=0的时候表示最大限度使用物理内存，然后才是 swap空间
+				
+linux  內存參數
+	kernel.sem = 250 32000 100 128
+	kernel.shmall = 2097152      # 所有內存大小
+	kernel.shmmax = 2147483648    #定义单个共享内存段的最大值    
+	kernel.shmmni = 4096     #共享内存段的最大数量
+	fs.aio-max-nr = 1048576
+	fs.file-max = 6815744
+	net.core.rmem_default = 4194304
+	net.core.rmem_max = 4194304
+	net.core.wmem_default = 262144
+	net.core.wmem_max = 1048576
+	net.ipv4.ip_local_port_range = 9000 65500
+
+linux  測試iops 
+	sysbench --test=fileio --threads=20 --file-total-size=2G --file-test-mode=rndrw prepare
+	sysbench --test=fileio --threads=20 --file-total-size=2G --file-test-mode=rndrw run > sysbench-data2.log
+	sysbench --test=fileio --threads=20 --file-total-size=2G --file-test-mode=rndrw cleanup
+
+blkid
+usermod -a -G wheel dbadmin
+
+2.  linux 系統信息及運行情況的查看
+            
+	1>  查看系統服務的啟動情況
+			centos7: systemctl list-unit-files
+			centos 6以下：service --status-all    或者 chkconfig(查看開機啟動項)
+
+	2>  查看端口被什麼程式佔用
+			lsof -i:[port]  如：lsof -i :3306
+			或
+			netstat -tunlp | grep 端口或程式
+
+	3> 查詢操作系統版本
+		   cat /etc/redhat-release    cat /etc/system-release     或cat /etc/issue
+
+	4> 查看server 配置
+		   =>查看物理CPU 的個數： cat /proc/cpuinfo |grep 'physical id' 或 top 再 1
+		   =>查看每個物理CPU 中的core 的個數 （即核數） cat /proc/cpuinfo |grep "cpu cores"|uniq
+		   =>查看邏輯CPU 的個數 cat /proc/cpuinfo |grep "processor"|wc -l
+		   =>查看CPU 信息(all)   cat /proc/cpuinfo |grep name |cut -f2 -d: |uniq -c
+		   =>查看操作系統 位數 getconf LONG_BIT  或者使用uname -a
+
+	5> linux 查看设备信息（厂商、型号、序列号）
+		   =>廠商 ：dmidecode -s system-manufacturer
+		   =>型號 ：dmidecode -s system-product-name 
+		   =>序列號：dmidecode -s system-serial-number
+
+
+ftp 產生公鑰
+	known_hosts
+	sftp sftpuser@10.67.50.164
+
+[root@localhost ~]# scp mysql-5.1.55.tar.gz root@192.168.3.22:.
+root@192.168.3.22's password:
+bash: scp: command not found
+lost connection
+提示scp的命令找不到，但是查找发现命令是存在的
+[root@localhost ~]# whereis scp
+[root@com ~]# yum install openssh-clients*
+
+1. 首先查看当前系统的语言 1、echo  $LANG   查看当前操作系统的语言
+	中文：zh_CN.UTF-8
+	英文:：en_US.UTF-8
+
+2、临时更改默认语言，当前立即生效 重启失效
+	export  LANG=en_US.UTF-8
+3、永久生效,修改配置文件
+	centos7/rhel7之前版本：vim  /etc/sysconfig/i18n
+	centos7/rhel7版本：vim /etc/locale.conf
+	修改：LANG=“en_US.UTF-8”
+4、使其立即生效
+
+source    /etc/sysconfig/i18n
+source   /etc/locale.conf
+
+
+lvm 分區命令
+
+	fuser -m /home
+	1. 邏輯卷擴容： lvextend -L +13G -r /dev/vg_prdbiweb/lv_swap
+	2. 移除邏輯卷： lvremove /dev/vg_prdbiweb/lv_home
+	3. 內存同步到磁盤  sync;sync
+	4. 卸載swap  swapoff /dev/mapper/vg_prdbiweb-lv_swap
+	5. 創建swap mkswap /dev/mapper/vg_prdbiweb-lv_swap
+	6. 掛載swap swapon /dev/mapper/vg_prdbiweb-lv_swap
+	7. 創建邏輯卷 lvcreate -L 100G -n lv_home_oracle /dev/vg_prdbiweb
+	8. 格式化邏輯卷  mkfs.ext4 /dev/vg_prdbiweb/lv_home_oracle
+	 9. 同步分區 partprobe
+	10  blkid 查看分區的編號
+	11 創建物理卷pvcreate  /dev/vdb1
+	12 擴展卷組  vgextend sysvg /dev/vdb1
+	13 卷組中有遺失的邏輯卷，則使用 vgreduce --removemissing sysvg
+
+
+	命令格式1：sed 's/原字符串/新字符串/' 文件
+	命令格式2：sed 's/原字符串/新字符串/g' 文件
+
+	命令格式1：sed '行号c 新字符串' 文件
+	命令格式2：sed '起始行号，终止行号c 新字符串' 文件
+	命令格式：sed -e 命令1 -e 命令2 -e 命令3
+
+
+查看磁盤扇區大小
+	blockdev --getss /dev/sdb
+設置時間格式  export time_style= '+%Y-%m-%d %H:%M:%S'
+
+使用iostat分析IO性能
+
+转载 节操下溢笨狐狸 发布于2018-08-28 14:01:47 阅读数 9615  收藏
+	更新于2018-08-28 14:01:47
+	分类专栏： linux Command
+	展开
+	使用iostat分析IO性能
+
+iostat用于输出CPU和磁盘I/O相关的统计信息.
+
+1.不加选项执行iostat
+
+[patrickxu@vm1 ~]$ iostat
+Linux 2.6.32-279.19.3.el6.ucloud.x86_64 (vm1)   06/11/2017  _x86_64_    (8 CPU)
+
+avg-cpu:  %user   %nice %system %iowait  %steal   %idle
+           0.08    0.00    0.06    0.00    0.00   99.86
+
+Device:            tps   Blk_read/s   Blk_wrtn/s   Blk_read   Blk_wrtn
+vda               0.45         0.29         8.10    6634946  183036680
+vdb               0.12         3.11        30.55   70342034  689955328
+单独执行iostat，显示的结果为从系统开机到当前执行时刻的统计信息。
+
+以上输出中，包含三部分：
+
+选项	说明
+第一行	最上面指示系统版本、主机名和当前日期
+avg-cpu	总体cpu使用情况统计信息，对于多核cpu，这里为所有cpu的平均值
+Device	各磁盘设备的IO统计信息
+Device中各列参数含义如下：
+
+选项	说明
+%user	CPU在用户态执行进程的时间百分比。
+%nice	CPU在用户态模式下，用于nice操作，所占用CPU总时间的百分比
+%system	CPU处在内核态执行进程的时间百分比
+%iowait	CPU用于等待I/O操作占用CPU总时间的百分比
+%steal	管理程序(hypervisor)为另一个虚拟进程提供服务而等待虚拟CPU的百分比
+%idle	CPU空闲时间百分比
+1. 若 %iowait 的值过高，表示硬盘存在I/O瓶颈 
+2. 若 %idle 的值高但系统响应慢时，有可能是CPU等待分配内存，此时应加大内存容量 
+3. 若 %idle 的值持续低于1，则系统的CPU处理能力相对较低，表明系统中最需要解决的资源是 CPU
+
+avg-cpu中各列参数含义如下：
+
+选项	说明
+Device	设备名称
+tps	每秒向磁盘设备请求数据的次数，包括读、写请求，为rtps与wtps的和。出于效率考虑，每一次IO下发后并不是立即处理请求，而是将请求合并(merge)，这里tps指请求合并后的请求计数。
+Blk_read/s	Indicate the amount of data read from the device expressed in a number of blocks per second. Blocks are equivalent to sectors with kernels 2.4 and later and therefore have a size of 512 bytes. With older kernels, a block is of indeterminate size.
+Blk_wrtn/s	Indicate the amount of data written to the device expressed in a number of blocks per second.
+Blk_read	取样时间间隔内读扇区总数量
+Blk_wrtn	取样时间间隔内写扇区总数量
+我们可以使用-c选项单独显示avg-cpu部分的结果，使用-d选项单独显示Device部分的信息。
+
+2.指定采样时间间隔与采样次数
+
+与sar命令一样，我们可以以”iostat interval [count] ”形式指定iostat命令的采样间隔和采样次数：
+
+[patrickxu@vm1 ~]$ iostat -d 2 3
+Linux 2.6.32-279.19.3.el6.ucloud.x86_64 (vm1)   06/12/2017  _x86_64_    (8 CPU)
+
+Device:            tps   Blk_read/s   Blk_wrtn/s   Blk_read   Blk_wrtn
+vda               0.45         0.29         8.10    6634946  183051408
+vdb               0.12         3.11        30.55   70342034  689955328
+
+Device:            tps   Blk_read/s   Blk_wrtn/s   Blk_read   Blk_wrtn
+vda               0.00         0.00         0.00          0          0
+vdb               0.00         0.00         0.00          0          0
+
+Device:            tps   Blk_read/s   Blk_wrtn/s   Blk_read   Blk_wrtn
+vda               1.50         0.00        12.00          0         24
+vdb               0.00         0.00         0.00          0          0
+以上命令输出Device的信息，采样时间为1秒，采样2次，若不指定采样次数，则iostat会一直输出采样信息，直到按”ctrl+c”退出命令。注意，第1次采样信息与单独执行iostat的效果一样，为从系统开机到当前执行时刻的统计信息。
+
+3.以kB为单位显示读写信息(-k选项)/以mB为单位显示读写信息(-m选项)
+
+我们可以使用-k选项，指定iostat的部分输出结果以kB为单位，而不是以扇区数为单位：
+
+[patrickxu@vm1 ~]$ iostat -d -k
+Linux 2.6.32-279.19.3.el6.ucloud.x86_64 (vm1)   06/12/2017  _x86_64_    (8 CPU)
+
+Device:            tps    kB_read/s    kB_wrtn/s    kB_read    kB_wrtn
+vda               0.45         0.15         4.05    3317473   91525980
+vdb               0.12         1.56        15.27   35171017  344977664
+以上输出中，kB_read/s、kB_wrtn/s、kB_read和kB_wrtn的值均以kB为单位，相比以扇区数为单位，这里的值为原值的一半(1kB=512bytes*2)
+
+4.更详细的io统计信息(-x选项)
+
+为显示更详细的io设备统计信息，我们可以使用-x选项，在分析io瓶颈时，一般都会开启-x选项：
+
+linux # iostat -x -k -d 1
+Linux 2.6.16.60-0.21-smp (linux)     06/13/12
+
+……
+Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await  svctm  %util
+sda               0.00  9915.00    1.00   90.00     4.00 34360.00   755.25    11.79  120.57   6.33  57.60
+以上各列的含义如下：
+
+选项	说明
+rrqm/s	每秒对该设备的读请求被合并次数，文件系统会对读取同块(block)的请求进行合并
+wrqm/s	每秒对该设备的写请求被合并次数
+r/s	每秒完成的读次数
+w/s	每秒完成的写次数
+rkB/s	每秒读数据量(kB为单位)
+wkB/s	每秒写数据量(kB为单位)
+avgrq-sz	平均每次IO操作的数据量(扇区数为单位)
+avgqu-sz	平均等待处理的IO请求队列长度
+await	平均每次IO请求等待时间(包括等待时间和处理时间，毫秒为单位)
+svctm	平均每次IO请求的处理时间(毫秒为单位)
+%util	采用周期内用于IO操作的时间比率，即IO队列非空的时间比率
+对于以上示例输出，我们可以获取到以下信息： 
+- 每秒向磁盘上写30M左右数据(wkB/s值) 
+- 每秒有91次IO操作(r/s+w/s)，其中以写操作为主体 
+- 平均每次IO请求等待时间为120.57毫秒，处理时间为6.33毫秒 
+- 等待处理的IO请求队列中，平均有11.79个请求驻留
+
+实际查看时，一般结合着多个选项查看: 如iostat -dxm 3
+
+[root@yg-uhost724 ~]# iostat -dxm 5
+Linux 2.6.32-279.19.16.el6.ucloud.x86_64 (yg-uhost724)  06/12/2017  _x86_64_    (24 CPU)
+
+Device:         rrqm/s   wrqm/s     r/s     w/s    rMB/s    wMB/s avgrq-sz avgqu-sz   await  svctm  %util
+sda               0.69    29.89    1.36   21.52     0.05     0.20    23.04     0.04    1.96   0.29   0.67
+sdb             682.88  1811.86   77.94  417.73     2.97     8.71    48.27     0.01    0.03   0.10   4.89
+dm-14             0.00     0.00    0.03   41.47     0.00     0.16     8.00     0.01    0.12   0.02   0.10
+dm-0              0.00     0.00    0.00    0.00     0.00     0.00     8.00     0.00    7.24   0.07   0.00
+dm-2              0.00     0.00    0.00    0.00     0.00     0.00     8.00     0.00    0.07   0.04   0.00
+dm-3              0.00     0.00    0.00    0.98     0.00     0.00     8.00     0.00    3.57   0.22   0.02
+dm-5              0.00     0.00    0.18   50.51     0.00     0.20     8.00     0.03    0.44   0.01   0.07
+dm-1              0.00     0.00    1.50    5.51     0.01     0.02     8.00     0.03    4.04   0.04   0.03
+dm-6              0.00     0.00  123.23 1042.56     0.48     4.07     8.00     0.01    0.01   0.02   1.90
+dm-4              0.00     0.00  635.74 1069.59     2.48     4.18     8.00     0.00    0.04   0.01   2.39
+sdc               7.23   106.32    0.52    0.94     0.03     0.42   627.54     0.02   13.32  17.58   2.58
+
+Device:         rrqm/s   wrqm/s     r/s     w/s    rMB/s    wMB/s avgrq-sz avgqu-sz   await  svctm  %util
+sda               0.00    15.00    0.40   17.80     0.00     0.10    10.90     0.00    0.10   0.10   0.18
+sdb              82.60 11967.00  414.60 2500.20     1.94    56.51    41.07    12.07    4.14   0.07  21.02
+dm-14             0.00     0.00    0.00    0.20     0.00     0.00     8.00     0.00    0.00   0.00   0.00
+dm-0              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00   0.00   0.00
+dm-2              0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00   0.00   0.00
+dm-3              0.00     0.00    0.00    1.80     0.00     0.01     8.00     0.00    0.11   0.11   0.02
+dm-5              0.00     0.00    0.00    2.00     0.00     0.01     8.00     0.00    0.00   0.00   0.00
+dm-1              0.00     0.00    0.00    2.40     0.00     0.01     8.00     0.01    4.17   1.25   0.30
+dm-6              0.00     0.00    0.00   45.20     0.00     0.18     8.00     0.11    2.45   0.55   2.48
+dm-4              0.00     0.00  497.20 14415.80     1.94    56.31     8.00    72.87    4.83   0.01  19.14
+sdc               0.00     0.00    0.00    0.00     0.00     0.00     0.00     0.00    0.00   0.00   0
+
+
+FIO介绍
+
+FIO是测试IOPS的非常好的工具，用来对磁盘进行压力测试和验证。磁盘IO是检查磁盘性能的重要指标，可以按照负载情况分成照顺序读写，随机读写两大类。FIO是一个可以产生很多线程或进程并执行用户指定的特定类型I/O操作的工具，FIO的典型用途是编写和模拟的I/O负载匹配的作业文件。也就是说FIO 是一个多线程io生成工具，可以生成多种IO模式，用来测试磁盘设备的性能（也包含文件系统：如针对网络文件系统 NFS 的IO测试）。fio在github上的坐标：https://github.com/axboe/fio 。
+
+FIO 工具常用参数：
+
+参数说明：
+filename=/dev/sdb1 测试文件名称，通常选择需要测试的盘的data目录。
+direct=1 是否使用directIO，测试过程绕过OS自带的buffer，使测试磁盘的结果更真实。Linux读写的时候，内核维护了缓存，数据先写到缓存，后面再后台写到SSD。读的时候也优先读缓存里的数据。这样速度可以加快，但是一旦掉电缓存里的数据就没了。所以有一种模式叫做DirectIO，跳过缓存，直接读写SSD。 
+rw=randwrite 测试随机写的I/O
+rw=randrw 测试随机写和读的I/O
+bs=16k 单次io的块文件大小为16k
+bsrange=512-2048 同上，提定数据块的大小范围
+size=5G 每个线程读写的数据量是5GB。
+numjobs=1 每个job（任务）开1个线程，这里用了几，后面每个用-name指定的任务就开几个线程测试。所以最终线程数=任务数（几个name=jobx）* numjobs。 
+name=job1：一个任务的名字，重复了也没关系。如果fio -name=job1 -name=job2，建立了两个任务，共享-name=job1之前的参数。-name之后的就是job2任务独有的参数。 
+thread  使用pthread_create创建线程，另一种是fork创建进程。进程的开销比线程要大，一般都采用thread测试。 
+runtime=1000 测试时间为1000秒，如果不写则一直将5g文件分4k每次写完为止。
+ioengine=libaio 指定io引擎使用libaio方式。libaio：Linux本地异步I/O。请注意，Linux可能只支持具有非缓冲I/O的排队行为（设置为“direct=1”或“buffered=0”）；rbd:通过librbd直接访问CEPH Rados 
+iodepth=16 队列的深度为16.在异步模式下，CPU不能一直无限的发命令到SSD。比如SSD执行读写如果发生了卡顿，那有可能系统会一直不停的发命令，几千个，甚至几万个，这样一方面SSD扛不住，另一方面这么多命令会很占内存，系统也要挂掉了。这样，就带来一个参数叫做队列深度。
+Block Devices（RBD），无需使用内核RBD驱动程序（rbd.ko）。该参数包含很多ioengine，如：libhdfs/rdma等
+rwmixwrite=30 在混合读写的模式下，写占30%
+group_reporting 关于显示结果的，汇总每个进程的信息。
+此外
+lockmem=1g 只使用1g内存进行测试。
+zero_buffers 用0初始化系统buffer。
+nrfiles=8 每个进程生成文件的数量。
+磁盘读写常用测试点：
+1. Read=100% Ramdon=100% rw=randread (100%随机读)
+2. Read=100% Sequence=100% rw=read （100%顺序读）
+3. Write=100% Sequence=100% rw=write （100%顺序写）
+4. Write=100% Ramdon=100% rw=randwrite （100%随机写）
+5. Read=70% Sequence=100% rw=rw, rwmixread=70, rwmixwrite=30
+（70%顺序读，30%顺序写）
+6. Read=70% Ramdon=100% rw=randrw, rwmixread=70, rwmixwrite=30
+(70%随机读，30%随机写)
+fio例子：
+
+[root@docker sda]# fio -ioengine=libaio -bs=4k -direct=1 -thread -rw=read -filename=/dev/sda -name="BS 4KB read test" -iodepth=16 -runtime=60
+BS 4KB read test: (g=0): rw=read, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=libaio, iodepth=16
+fio-3.7
+Starting 1 thread
+Jobs: 1 (f=1): [R(1)][100.0%][r=89.3MiB/s,w=0KiB/s][r=22.9k,w=0 IOPS][eta 00m:00s]
+BS 4KB read test: (groupid=0, jobs=1): err= 0: pid=18557: Thu Apr 11 13:08:11 2019
+   read: IOPS=22.7k, BW=88.5MiB/s (92.8MB/s)(5313MiB/60001msec)
+    slat (nsec): min=901, max=168330, avg=6932.34, stdev=1348.82
+    clat (usec): min=90, max=63760, avg=698.08, stdev=240.83
+     lat (usec): min=97, max=63762, avg=705.17, stdev=240.81
+    clat percentiles (usec):
+     |  1.00th=[  619],  5.00th=[  627], 10.00th=[  627], 20.00th=[  635],
+     | 30.00th=[  635], 40.00th=[  685], 50.00th=[  717], 60.00th=[  725],
+     | 70.00th=[  725], 80.00th=[  725], 90.00th=[  734], 95.00th=[  816],
+     | 99.00th=[ 1004], 99.50th=[ 1020], 99.90th=[ 1057], 99.95th=[ 1057],
+     | 99.99th=[ 1860]
+   bw (  KiB/s): min=62144, max=91552, per=100.00%, avg=90669.02, stdev=3533.77, samples=120
+   iops        : min=15536, max=22888, avg=22667.27, stdev=883.44, samples=120
+  lat (usec)   : 100=0.01%, 250=0.01%, 500=0.01%, 750=93.85%, 1000=5.14%
+  lat (msec)   : 2=0.99%, 4=0.01%, 10=0.01%, 50=0.01%, 100=0.01%
+  cpu          : usr=5.35%, sys=23.17%, ctx=1359692, majf=0, minf=17
+  IO depths    : 1=0.1%, 2=0.1%, 4=0.1%, 8=0.1%, 16=100.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.1%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=1360097,0,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=16
+
+Run status group 0 (all jobs):
+   READ: bw=88.5MiB/s (92.8MB/s), 88.5MiB/s-88.5MiB/s (92.8MB/s-92.8MB/s), io=5313MiB (5571MB), run=60001-60001msec
+
+Disk stats (read/write):
+  sda: ios=1357472/0, merge=70/0, ticks=949141/0, in_queue=948776, util=99.88%
+io=执行了多少M的IO
+
+bw=平均IO带宽
+iops=IOPS
+runt=线程运行时间
+slat=提交延迟，提交该IO请求到kernel所花的时间（不包括kernel处理的时间）
+clat=完成延迟, 提交该IO请求到kernel后，处理所花的时间
+lat=响应时间
+bw=带宽
+cpu=利用率
+IO depths=io队列
+IO submit=单个IO提交要提交的IO数
+IO complete=Like the above submit number, but for completions instead.
+IO issued=The number of read/write requests issued, and how many of them were short.
+IO latencies=IO完延迟的分布
+
+io=总共执行了多少size的IO
+aggrb=group总带宽
+minb=最小.平均带宽.
+maxb=最大平均带宽.
+mint=group中线程的最短运行时间.
+maxt=group中线程的最长运行时间.
+
+ios=所有group总共执行的IO数.
+merge=总共发生的IO合并数.
+ticks=Number of ticks we kept the disk busy.
+io_queue=花费在队列上的总共时间.
+util=磁盘利用率
+
+fio 有很多测试任务配置文件，在git工程 examples 文件夹中，我们可以使用命令行参数进行直接配置，也可以直接通过配置文件配置一次测试的内容。
+
+export TIME_STYLE='+%Y-%m-%d %H:%M:%S'
+
+git 設置代理
+                                                                                                                                                 
+  116  git config -l
+  117  git config --global https.proxy http://h7108579:pqhkr99ctw@10.36.6.66:312                                                                                                                                                 8
+  118  git config -l
+  119  git clone https://github.com/chrisnoto/KB.git
