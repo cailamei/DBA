@@ -7,7 +7,9 @@
                 3.  查看時間同步狀態    # ntpstat
                 4.  查看ntp 服務器的相關信息    # ntpq -p
                 5.  查看系統當前的時區    # cat /etc/localtime
-                6.  設置時區timedatectl set-timezone 'Asia/Shanghai'
+                6.  設置時區（使用第一種改）
+		    1> ln -sf /usr/share/zoneinfo/Asia/Singapore /etc/localtime
+                    2> timedatectl set-timezone 'Asia/Shanghai'
                   
                 7.  修改時區  #cp /usr/share/zoneinfo/Asia/Shanghai  /etc/localtime
                 8.  臨時修改系統當前的時間
