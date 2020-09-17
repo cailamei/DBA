@@ -513,3 +513,15 @@ git 設置代理
   117  git config --global https.proxy http://h7108579:pqhkr99ctw@10.36.6.66:312                                                                                                                                                 8
   118  git config -l
   119  git clone https://github.com/chrisnoto/KB.git
+
+
+cat 命令
+
+cat -A 文件里如果有特殊符号存在，特别是你从网页里直接copy来的，会导致配置文件出错，cat -A 就是专门找茬的
+cat -T 1 racv-l308^I^I^I^I^I^I^I .   /opt/IBM/ITM/logs/itm_config.lo... ^I 都是tab键，空格是真的空格
+
+
+
+ 
+
+
