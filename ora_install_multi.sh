@@ -4,7 +4,7 @@
 ##                                                                          ##
 ##                   Oracle 11g silent install script                       ##
 ##                   --------------------------------                       ##
-##                                             Author: 陳森 蔡洛洛          ##
+##                                             Author: Light                ##
 ##                                             Date:  2020/9/25             ##
 ##                                                                          ##
 ## The scope of this install script:                                        ##
