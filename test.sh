@@ -110,13 +110,13 @@ yum install -y expect tree bc ntp wget xorg-x11-xauth unzip ftp gcc libaio libai
 glibc-devel glibc-headers gcc-c++ sysstat \
 elfutils-libelf-devel \
 xorg-x11-server-utils \
-rlwrap
+rlwrap sshpass
 
 green "checking if there are missing packages..."
 rpm -q --qf '%{NAME}-%{VERSION}-%{RELEASE}(%{ARCH})\n' \
 ntp expect tree bc wget xorg-x11-xauth unzip ftp gcc libaio libaio-devel compat-libstdc++-33 \
 glibc-devel glibc-headers gcc-c++ sysstat \
-elfutils-libelf-devel xorg-x11-server-utils rlwrap
+elfutils-libelf-devel xorg-x11-server-utils rlwrap sshpass
 [ $? -gt 0 ] && red "there are missing packages " && exit 1
 }
 
@@ -431,13 +431,13 @@ yum install -y tree bc ntp wget xorg-x11-xauth unzip ftp gcc libaio libaio-devel
    glibc-devel glibc-headers gcc-c++ sysstat \\
    elfutils-libelf-devel \\
    xorg-x11-server-utils \\
-   rlwrap
+   rlwrap sshpass
 
 green "checking if there are missing packages..."
  rpm -q --qf '%{NAME}-%{VERSION}-%{RELEASE}(%{ARCH})\n' \\
  ntp wget xorg-x11-xauth unzip ftp gcc libaio libaio-devel compat-libstdc++-33 \\
  glibc-devel glibc-headers gcc-c++ sysstat \\
- elfutils-libelf-devel xorg-x11-server-utils rlwrap
+ elfutils-libelf-devel xorg-x11-server-utils rlwrap sshpass
 [ \$? -gt 0 ] && red "there are missing packages " && exit 1
 }
 
@@ -786,6 +786,7 @@ dbca_silent
 function post_install(){
 green "Starting post installation..."
 mkdir -p /data/{arch_log,expdata}
+mkdir -p /data/expdata/ftp
 chown -R oracle:dba /data/
 
 # alter db path sql script
@@ -812,6 +813,10 @@ alter database rename file "/data/oradata/${sid}/undotbs01.dbf" to "/data/oradat
 alter database rename file "/data/oradata/${sid}/redo01.log" to "/data/oradata/${sid}/onlinelog/redo01.log";
 alter database rename file "/data/oradata/${sid}/redo02.log" to "/data/oradata/${sid}/onlinelog/redo02.log";
 alter database rename file "/data/oradata/${sid}/redo03.log" to "/data/oradata/${sid}/onlinelog/redo03.log";
+ALTER DATABASE ADD STANDBY LOGFILE GROUP 4 ('/data/oradata/${sid}/onlinelog/standbyredo01.log') size 50m;
+ALTER DATABASE ADD STANDBY LOGFILE GROUP 5 ('/data/oradata/${sid}/onlinelog/standbyredo02.log') size 50m;
+ALTER DATABASE ADD STANDBY LOGFILE GROUP 6 ('/data/oradata/${sid}/onlinelog/standbyredo03.log') size 50m;
+ALTER DATABASE ADD STANDBY LOGFILE GROUP 7 ('/data/oradata/${sid}/onlinelog/standbyredo04.log') size 50m;
 
 EOF
 sed -i "s/\"/'/g" /home/oracle/${sid}-alterdbpath.sql
@@ -838,6 +843,7 @@ alter database open;
 create directory expbak as '/data/expdata';
 grant read,write on directory expbak to system;
 create pfile from spfile;
+alter system set log_archive_dest_state_2=enable;
 EOF
 
 green "Post installation is completed."
@@ -960,6 +966,59 @@ exit;
 EOF
 EEE
 
+cat >/home/oracle/run/del_archivelog.sh <<EEE
+export ORACLE_BASE=/home/oracle
+export ORACLE_HOME=/home/oracle/product/${ora_ver}/dbhome_1
+export PATH=$ORACLE_HOME/bin:$PATH
+export ORACLE_SID=${sid}
+/home/oracle/product/${ora_ver}/dbhome_1/bin/rman target / log=/home/oracle/run/del_${sid}_archivelog.log <<EOF
+crosscheck archivelog all;
+delete noprompt archivelog all completed before 'sysdate-14';
+exit;
+EOF
+EEE
+
+cat >/home/oracle/run/exp_${sid}_all_database.sh <<EEE
+
+export ORACLE_BASE=/home/oracle
+export ORACLE_HOME=/home/oracle/product/${ora_ver}/dbhome_1
+export PATH=$ORACLE_HOME/bin:$PATH
+export ORACLE_SID=${sid}
+export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
+BAKDATE=\`date +%F\`
+
+cd /data/expdata
+find /data/expdata/all_database_${sid}* -mtime +4 -exec rm -f {} \;
+expdp 'system/sys123sys' dumpfile=all_database_${sid}_%U_\$BAKDATE.dmp logfile=all_database_${sid}_\$BAKDATE.log  directory=EXPBAK   full=y parallel=6 compression=all
+
+gzip -f all_database_${sid}_*_\$BAKDATE.dmp
+cp all_database_${sid}_*_\$BAKDATE.*  /data/expdata/ftp
+cp all_database_${sid}_\$BAKDATE.log  /data/expdata/ftp
+
+echo "sftp start === `date`"
+HOST=10.67.50.163
+USER=sftpuser
+PASSWD=sftpuser
+
+sshpass -p \$PASSWD sftp -o StrictHostKeyChecking=no \$USER@\$HOST << !
+lcd /data/expdata/ftp
+cd  /Backup/${sid}_${ipaddr}/
+put all_database_${sid}*
+bye
+!
+
+rm -f /data/expdata/ftp/*
+echo "sftp finshed === `date`"
+EEE
+
+cat >/var/spool/cron/oracle <<EOF
+30 23 * * 3,7 sh /home/oracle/run/exp_${sid}_all_database.sh > /home/oracle/run/exp_${sid}_all_database.log  2>&1
+10 01 * * * sh /home/oracle/run/del_archivelog.sh
+EOF
+ 
+chmod 600 /var/spool/cron/oracle
+chown oracle:oinstall /var/spool/cron/oracle
+
 cat >> /etc/rc.local <<EOF
 su - oracle -c 'sh /home/oracle/run/DB_startup.sh' 1>/home/oracle/run/DB_startup.log 2>/home/oracle/run/DB_startup.err
 EOF
@@ -983,6 +1042,7 @@ su -m - oracle -c "cp $ORACLE_HOME/dbs/init${sid}.ora $ORACLE_HOME/dbs/init${sid
 su -m - oracle -c "./expect_scp ${standby_ip} oracle Oracle@cesbg.foxconn.com99 $ORACLE_BASE/listener.ora $ORACLE_HOME/network/admin/listener.ora"
 su -m - oracle -c "./expect_scp ${standby_ip} oracle Oracle@cesbg.foxconn.com99 $ORACLE_BASE/run/DB_startup.sh $ORACLE_BASE/run/DB_startup.sh"
 su -m - oracle -c "./expect_scp ${standby_ip} oracle Oracle@cesbg.foxconn.com99 $ORACLE_BASE/run/DB_shutdown.sh $ORACLE_BASE/run/DB_shutdown.sh"
+su -m - oracle -c "./expect_scp ${standby_ip} oracle Oracle@cesbg.foxconn.com99 $ORACLE_BASE/run/del_archivelog.sh $ORACLE_BASE/run/del_archivelog.sh"
 
 
 
@@ -998,13 +1058,13 @@ su -m - oracle -c "./expect_scp ${standby_ip} oracle Oracle@cesbg.foxconn.com99 
 cat >/home/dbadmin/standby_path.sh <<EEE
 
 mkdir -p /data/{arch_log,expdata,oradata}
+mkdir -p /data/expdata/ftp
 mkdir -p /data/oradata/${sid}/{controlfile,datafile,onlinelog}
 mkdir -p /home/oracle/admin/${sid}/adump
 chown -R oracle:dba /data/
 chown -R oracle:dba /home/oracle/admin/${sid}/adump/
 
-sed -i 's/startup;/startup mount;/'  $ORACLE_BASE/run/DB_startup.sh
-sed -i '/startup mount;/a\alter database recover managed standby database disconnect from session;'  $ORACLE_BASE/run/DB_startup.sh
+sed -i '/startup;/a\alter database recover managed standby database using current logfile disconnect;'  $ORACLE_BASE/run/DB_startup.sh
 sed -i '/shutdown immediate;/i\alter database recover managed standby database cancel;' $ORACLE_BASE/run/DB_shutdown.sh
 
 su - oracle -c "lsnrctl start"
@@ -1020,11 +1080,11 @@ EOF
 "
 su - oracle -c "sqlplus / as sysdba  <<EOF
 alter database open;
-alter database recover managed standby database disconnect from session;
+alter database recover managed standby database using current logfile disconnect;
 alter database recover managed standby database cancel;
 shutdown immediate;
-startup mount;
-alter database recover managed standby database disconnect from session;
+startup;
+alter database recover managed standby database using current logfile disconnect;
 EOF"
 
 cat >> /etc/rc.local <<EOF
@@ -1034,6 +1094,14 @@ chmod +x /etc/rc.local
 chown -R oracle:oinstall /home/oracle/run
 echo set sqlprompt '"'_user"'"@"'"_connect_identifier"'"\> "'"'"' >>/home/oracle/product/${ora_ver}/dbhome_1/sqlplus/admin/glogin.sql
 su -m - oracle -c "ln -s $ORACLE_BASE/diag/rdbms/${sid}_sty/${sid}/trace/alert_${sid}.log alert_${sid}.log"
+
+
+cat >/var/spool/cron/oracle <<EOF
+10 01 * * * sh /home/oracle/run/del_archivelog.sh
+EOF
+
+chmod 600 /var/spool/cron/oracle
+chown oracle:oinstall /var/spool/cron/oracle
 
 EEE
 
