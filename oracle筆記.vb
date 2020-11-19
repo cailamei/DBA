@@ -453,6 +453,7 @@ oracle 工具類基本操作
 			【linux 環境】 EXCLUDE=SCHEMA:\"\IN \(\'SFISM4\'\)\"\
 			【windows 環境】EXCLUDE=TABLE:"IN ('EMP','DEPT')",SEQUENCE,VIEW,INDEX:"= 'INDX_NAME'",PROCEDURE:"LIKE 'PROC_U%'(_代表任意字符),\"TABLE:\"> 'E' \"(大于字符E的所有表对象)  
 			eg.
+			
 			expdp system/sys123sys@tjepd1big directory=DUMP_DIR dumpfile=epd1big_full_20190808.dmp logfile=epd1big_full_0808.log full=y  EXCLUDE=SCHEMA:\"IN \(\'SFISM4\'\)\"
 			
 			分區表轉普通表
@@ -514,27 +515,56 @@ oracle 工具類基本操作
 				recover database;
 				}
 				
-	4.	oracle 日誌挖掘工具 dbms_logmnr
-		1>	將歸檔日誌添加到LOGMNR
-			exec dbms_logmnr.add_logfile(logfilename=>'/data/database/tjepd1db/arch/1_466410_785700410.dbf',options=>dbms_logmnr.new);
-			exec dbms_logmnr.add_logfile(logfilename=>'/data/database/tjepd1db/arch/1_466411_785700410.dbf',options=>dbms_logmnr.addfile);
-			select 'exec dbms_logmnr.add_logfile(logfilename=>''' ||name||''',options=>dbms_logmnr.addfile);'  from v$archived_log where name !='standbydb' and first_time >'2020-06-02 12:00:00' and first_time <'2020-06-02 12:10:00';
+	4.	oracle 日誌挖掘工具 LogMiner
+		1)	oracle11g LogMiner 的使用方法
+			1>	將歸檔日誌添加到LOGMNR
+				exec dbms_logmnr.add_logfile(logfilename=>'/data/database/tjepd1db/arch/1_466410_785700410.dbf',options=>dbms_logmnr.new);
+				exec dbms_logmnr.add_logfile(logfilename=>'/data/database/tjepd1db/arch/1_466411_785700410.dbf',options=>dbms_logmnr.addfile);
+				select 'exec dbms_logmnr.add_logfile(logfilename=>''' ||name||''',options=>dbms_logmnr.addfile);'  from v$archived_log where name !='standbydb' and first_time >'2020-06-02 12:00:00' and first_time <'2020-06-02 12:10:00';
 
-		2>	開始分析
-			exec dbms_logmnr.start_logmnr(options=>dbms_logmnr.dict_from_online_catalog);
- 
-		3>	查看LOGMNR分析後的數據。
-			select timestamp,sql_redo from v$logmnr_contents;
- 
-		4>	保存到table logmnr_contents
-			create table logmnr_contents as select * from v$logmnr_contents;
- 
-		5>	查看logmnr_contents內容
-			select OPERATION,DATA_OBJ#,count(OPERATION) from sys.logmnr_contents group by OPERATION,DATA_OBJ#
- 
-		6>	结束LOGMNR操作, drop table logmnr_contents
-			exec dbms_logmnr.end_logmnr;
-			drop table logmnr_contents PURGE;
+			2>	開始分析
+				exec dbms_logmnr.start_logmnr(options=>dbms_logmnr.dict_from_online_catalog);
+	 
+			3>	查看LOGMNR分析後的數據。
+				select timestamp,sql_redo from v$logmnr_contents;
+	 
+			4>	保存到table logmnr_contents
+				create table logmnr_contents as select * from v$logmnr_contents;
+	 
+			5>	查看logmnr_contents內容
+				select OPERATION,DATA_OBJ#,count(OPERATION) from sys.logmnr_contents group by OPERATION,DATA_OBJ#
+	 
+			6>	结束LOGMNR操作, drop table logmnr_contents
+				exec dbms_logmnr.end_logmnr;
+				drop table logmnr_contents PURGE;
+		2)	oracle 8i/9i LogMiner 的使用方法
+			LogMiner 包含兩個包，一個是dbms_logmnr_d(包括一個procedure dbms_logmnr_d.build()用於提取數據字典信息) 另一個是dbms_logmnr(add_logfile() /start_logmnr() /end_logmnr())
+			提取日誌信息分為兩種，一種是使用字典文件，一種是不適用字典文件
+			1>	使用字典文件
+				startup mount；
+				show pamameter utl; 
+				alter system set utl_file_dir='/data/logmnr' scope=spfile; (-- 這個目錄用於存放提取出的數據字典信息)
+				shutdown immediate;
+				startup;
+				exec dbms_logmnr_d.build(dictionary_filename =>'dic.ora',discionary_location =>'/data/logmnr'); discionary_location 需要和show pamameter utl 結果完全一致；
+				或
+				exec dbms_logmnr_d.build('dic.ora','/data/logmnr');
+				exec dbms_logmnr.add_logfile(logfilename=>'/data/database/tjepd1db/arch/1_466410_785700410.dbf',options=>dbms_logmnr.new);
+				exec dbms_logmnr.add_logfile(logfilename=>'/data/database/tjepd1db/arch/1_466411_785700410.dbf',options=>dbms_logmnr.addfile);
+				exec dbms_logmnr.start_logmnr(dictfilename=>'/data/logmnr/dic.ora');
+				select data_obj#,operation, count(1) from  v$logmnr_contents group by data_obj#,operation order by count(1) desc;
+				exec dbms_logmnr.end_logmnr;
+			2>	不使用字典文件(DB 不需要重啟)
+				exec dbms_logmnr.add_logfile(logfilename=>'/data/database/tjepd1db/arch/1_466410_785700410.dbf',options=>dbms_logmnr.new);
+				exec dbms_logmnr.add_logfile(logfilename=>'/data/database/tjepd1db/arch/1_466411_785700410.dbf',options=>dbms_logmnr.addfile);
+				exec dbms_logmnr.start_logmnr();
+				select data_obj#,operation, count(1) from  v$logmnr_contents group by data_obj#,operation order by count(1) desc;
+				exec dbms_logmnr.end_logmnr();
+				
+				
+				
+				
+			
 			
 			
 ORACLE 相關設置            
@@ -616,6 +646,28 @@ ORACLE 相關設置
 		2>	UTF-16：相對常用的60000 多個字符使2個字節，其餘使用4個字節；
 		3>	UTF-8 ：兼容ASCII 拉丁文，希臘文等使用2個字節，包括漢字在內的其他常用字符使用3個字節，剩下的極少的字符使用4個字節；
 		4>	oracle 數據庫服務器字符集，
+	11.	oracle nls_date_language 顯示格式設定；
+		1>	查询nls_date_format
+			1)select * from nls_session_parameters where parameter = 'NLS_DATE_FORMAT';
+			显示：NLS_DATE_FORMAT      DD-MON-RR
+			2)select * from nls_database_parameters where parameter = 'NLS_DATE_FORMAT';
+			显示：NLS_DATE_FORMAT    DD-MON-RR
+			3)select * from nls_instance_parameters where parameter = 'NLS_DATE_FORMAT';
+			显示：NLS_DATE_FORMAT    null  （在我本地nls_instance_parameters中没有设置NLS_DATE_FORMAT）
+
+		2>	设置nls_date_format
+			session级别设定值：
+			alter session set nls_date_format = 'yyyy-mm-dd hh24:mi:ss';
+			设定之后再查询会发现nls_session_parameters视图中nls_date_format的值已经变了，而nls_instance_parameters、nls_database_parameters视图中的值没有变。
+			SESSION级别——如果只是希望自己看到某种格式而不影响其他人看到的结果。
+			instance级别设定值：
+			alter system set nls_date_format = 'yyyy-mm-dd hh24:mi:ss';此级别的值在oracle9i以后就不允许设定了，所以本地设定不了。
+			database级别设定值：
+			oracle不允许设定此级别的参数值，也没有提供设定语句。
+		3>	然后，我们可以通过以下查询，发现本数据库是不允许instance级别和database级别参数值更改的
+			select name, isses_modifiable, issys_modifiable, isinstance_modifiable from v$parameter where name = 'nls_date_format';
+			显示：nls_date_format    TRUE    FALSE    FALSE
+			发现：isses_modifiable=TRUE、issys_modifiable=FALSE、isinstance_modifiable=FALSE的 
 oracle 查看修改DB相關命令
 	1.  用戶相關
 		1>  創建用戶 create user CAILAMEI  identified by  default tablespace test_data  temporary tablespace temp;
@@ -750,7 +802,7 @@ oracle 查看修改DB相關命令
 				FROM all_objects 
 				WHERE status = 'INVALID'  AND object_type in ('FUNCTION','JAVA SOURCE','JAVA CLASS','PROCEDURE','PACKAGE','VIEW','TRIGGER'); 
 				編譯public 同義詞
-				SELECT 'alter  PUBLIC SYNONYM '||object_name||' compile;' FROM all_objects WHERE status = 'INVALID' and OWNER ='PUBLIC' and object_type ='SYNONYM'
+					
 				@$ORACLE_HOME/rdbms/admin/utlrp.sql sys 用戶下執行腳本，批量編譯無效的對象
 		
 		4>  查看并執行job
@@ -800,6 +852,10 @@ oracle 查看修改DB相關命令
 			select  * from all_source where text like '%UPDATE SFISM4.R_WIP_TRACKING_T%';
 		6>	創建同義詞
 			CREATE [OR REPLACE] [PUBLIC] SYNONYM [当前用户.]synonym_nameFOR [其他用户.]object_name;
+		7>	查看並創建序列
+			create sequence aaa increment by 1 start with 1;
+			select aaa.nextval from dual;
+			select aaa.currval from dual;
 			
 		
 	5.	表分區
@@ -864,8 +920,16 @@ oracle 查看修改DB相關命令
 		to_char(sysdate, 'D') 当周第几天,
 		to_char(sysdate, 'DDD') 当年第几天    
 		from dual;
+		
+		select decode(200, 100, 100, '200', '200', '300') from dual;
+		select trunc(sysdate) from dual;2020-10-08 00:00:00 -- 截取至年月日，時分秒用0補齊
+		select round(to_date('2020-10-08 12:30:59','yyyy-mm-dd hh24:mi:ss')) from dual;2020-10-09 00:00:00 -- syadate 當天超過12點，則結果值為後一天的年月日：00：00:00
+		select trunc(sysdate,'MONTH') from dual;--2020-10-01 00:00:00 --截取到月
+		select trunc(sysdate,'YEAR') from dual;--截取到年2020-01-01 00:00:00
+		select round(sysdate,'MONTH') from dual; 2020-10-01 00:00:00
+		select round(sysdate,'YEAR') from dual;2021-01-01 00:00:00
 		*** alter   session set NLS_DATE_LANGUAGE = American;***
-	9.	oracle 參數設置(動態&靜態)
+	9.	oracle 參數設置(動態&靜態) 
 		select distinct ISSYS_MODIFIABLE from v$parameter；
 		IMMEDIATE --動態參數
 		FALSE --靜態參數
@@ -1033,6 +1097,11 @@ oracle 查看修改DB相關命令
 			drop 不加purge 表空間釋放，但是會在回收站；
 			delete 不會降低水位；
 	17>	更改數據庫字符集
+		查看DB編碼
+		select * from nls_database_parameters where parameter ='NLS_CHARACTERSET';--查詢數據庫字符集
+		select * from nls_instance_parameters where parameter='NLS_LANGUAGE';-- 查詢client 端字符集
+		select sys_context('userenv','language') from dual; 查詢client 端字符集
+
 		oracle 数据库 NLS_CHARACTERSET 字符集的修改
 		先连接数据库：打开命令窗口输入： sqlplus / as sysdba
 		步骤：
@@ -1044,7 +1113,7 @@ oracle 查看修改DB相關命令
 		SQL> ALTER SYSTEM SET AQ_TM_PROCESSES=0;
 		SQL> ALTER DATABASE OPEN;
 		SQL> set linesize 120;
-		SQL> ALTER DATABASE CHARACTER SET ZHS16GBK;
+		SQL> ALTER DATABASE CHARACTER SET ZHS16GBK;ZHT16BIG5
 		执行过程中常见问题：
 		问题1:
 		SQL> ALTER DATABASE CHARACTER SET ZHS16CGB231280;
@@ -1166,6 +1235,10 @@ oracle 查看修改DB相關命令
 		SQL> drop tablespace undotbs1 including contents;
 		最后需要在重启数据库或者重启计算机后到存储数据文件的路径下删除数据文件（为什么要手动删除呢：以上步骤只是删除了ORACLE中undo表空间的逻辑关系，即删除了数据文件在数据字典中的关联，不会自动删除项关联的数据文件）。  
 		drop tablespace undotbs1 including contents and datafiles;
+	22>	查看oracle版本：
+		select * from v$version;
+		select version from v$instance;
+		select version FROM Product_component_version   Where SUBSTR(PRODUCT,1,6)='Oracle';
 oracle DG 搭建相關命令
 	1.  查看數據庫角色以及狀態
 		select database_role,switchover_status from v$database;          
@@ -1383,5 +1456,57 @@ table、segment、extent、block之间的关系
 	Oracle每个表或索引都会对应著一个段。如果使用分区表或者分区索引，每个分区（partition）都对应着一个段。每个段都有名字，即对象（表、索引）的名字，段由extent组成，但不要求连续。
 	一个table至少是一个segment，如果分区表，则每个分区是一个segment，table可以看成是一个逻辑上的概 念，segment可以看成是这个逻辑概念的物理实现；segment由一个或多个extents组成，segment不可以跨表空间但可以跨数据文件；extent由多个连续的blocks组成，不可以跨数据文件；block由1-多个os块组成，是oracle i/o的最小存储单位
 
+sql 語言類型
+	数据操纵语言DML：select、insert、update、delete、merge
+	数据定义语言DDL：create、alter、drop、truncate、rename
+	事务控制语言TCL：commit、rollback、savepoint
+	数据控制语言DCL：grant、revoke
+oracle 數據類型
+	utf-8  一個字符佔用一個byte,漢字佔用3個byte
+	char：固定字符，最长2000个
+	varchar2：可变长，最长4000最小1
+	number：长度范围1~38，可以存整数或浮点数，注意number(m,n)[m为精度，n为小数位数，所以整数为m-n位
+	int、numeric、integer、DECIMAL 类型在创建后均转为number类型，int相当于number(22),存储总长度为22的整数
+
+oracle decode函数和case声明
+	1.	decode：
+		select decode(expr, 'search1', 'result1', 'search2', 'result2', ..., default) from table_xxx;
+		select decode('animal', 'cat', '猫', 'dog', '狗', 'chick', '鸡', '其他动物') from table_animal;
+		如果没有default，默认default为null。
+		decode里有长度限制，最大为255。（oracle很多函数的参数都有长度限制，比如regexp_like正则表达式长度<512byte）
+	2.	case：
+		case when animal='cat' then '猫'
+		when animal='dog' then '狗'
+		when animal='chick' then '鸡'
+		else '其他动物'
+		end 'animal';
+		
+	3.	区别：
+	   1>	case是statement声明，decode是函数
+	   2>	case的逻辑操作不仅仅只是等于判断，而decode只能做等值判断
+	   3>	case可以做逻辑比较，如<、>、between、like等等
+	   4>	case可以跟谓词如in，case when salary in (9000, 10000) then '9K-10K'
+	   5>	case可以跟子查询如，case when emp_no in (select mgr_no from dept) then 'dept_mgr'
+	   6>	case可以用于PL/SQL construct，而decode只能作为一个函数应用在sql内部
+	   7>	case可以作为function/procedure参数使用，decode不能
+			exec myproc(case: A when 'three' then 3 else 0 end);  --right
+			exec myproc(decode(:a, 'three', 3, 0));  --error
+	   8>	case对类型敏感，类型不同会报错，而decode有类型转换
+			select decode(200, 100, 100, '200', '200', '300') from dual;
+			select case 200 when 100 then 100
+			when '200' then '200'
+			else '300'
+			end test
+			from dual;
+	   9>	两者对null处理输出不同
+			select decode(null, null, 'this is null', 'this is not null') from dual;
+			select case null when null then 'this is null'
+			else 'this is not null'
+			end test
+			from dual;
+	   10>	最重要一点：case执行速度比decode更优秀
 find ./ -mtime +5 |xargs rm -rf
 cat /etc/filebeat/filebeat.yml | egrep -v '#|^$'
+ssh -R 1880:9.190.26.244:80 racv-l402聽聽聽聽聽聽聽聽聽聽聽聽 杞彂yum repo鍦板潃 
+:%s/old_pattern/new_pattern/g
+ssh -R anyport:yumserver:80 dest-host             转发yum repo地址
