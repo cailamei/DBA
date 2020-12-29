@@ -1,35 +1,77 @@
 56078535  nsd-it-service@fii-foxconn.com
-
-
 oracle 異常處理
-    1.  安裝：
-        1>  centos7版本，報錯后修改以下文件內容：$ORACLE_HOME/sysman/lib/ins_emagent.mk 在$(MK_EMAGENT_NMECTL)后添加 -lnnz11 注意- 前有空格   
-            sed -i 's/$(MK_EMAGENT_NMECTL)/$(MK_EMAGENT_NMECTL) -lnnz11/' ins_emagent.mk
-        2>  安裝數據庫報錯，File "/etc/oratab" is not accessible ；
-            sh /home/oracle/oraInventory/orainstRoot.sh sh /home/oracle/product/11.2.4/dbhome_1/root.sh
-        3>  安裝要求： swap:16G / 目錄 150~200G /data 分區
+	1.  安裝：
+		1>  centos7版本，報錯后修改以下文件內容：$ORACLE_HOME/sysman/lib/ins_emagent.mk 在$(MK_EMAGENT_NMECTL)后添加 -lnnz11 注意- 前有空格   
+			sed -i 's/$(MK_EMAGENT_NMECTL)/$(MK_EMAGENT_NMECTL) -lnnz11/' ins_emagent.mk
+		2>  安裝數據庫報錯，File "/etc/oratab" is not accessible ；
+			sh /home/oracle/oraInventory/orainstRoot.sh sh /home/oracle/product/11.2.4/dbhome_1/root.sh
+		3>  安裝要求： swap:16G / 目錄 150~200G /data 分區
             --                 
-    2.  誤刪除表數據
-        select * from SFIS1.C_ASY_BOM_T as of timestamp to_timestamp('2019-04-08 18:40:00','yyyy-mm-dd hh24:mi:ss')
-             
-    3.  關聯表update
-        update MACHAO_TEST2 a set a.COURSE=(select b.EMP_NAME from MACHAO_TEST b where a.EMP_NO=b.EMP_NO)
+	2.  誤刪除表數據
+		1>	dml 使用时间戳
+			select * from SFIS1.C_ASY_BOM_T as of timestamp to_timestamp('2019-04-08 18:40:00','yyyy-mm-dd hh24:mi:ss')
+		2>	drop table 使用recycle_bin 恢复
+			一、如何查看是否开启回收站功能？
+				SQL> show parameter recyclebin
+				NAME         TYPE        VALUE
+				----------- ----------- ----------
+				recyclebin      string        on
+				on：表示表空间启用的回收站功能，建议所有数据都开启这个功能，百利而无一害!
+				备注：该参数可以设置成session级别打开，也可以设置成system级别，不用重启就可以生效
+			二、如何不经过回收站直接删除并释放所占用空间？
+				SQL> drop table cube_scope purge
 
-    4.  Oracle 锁表与解锁表
+				备注：此命令相当于truncate+drop操作，一般不建议这么操作！
+
+			三、如何将回收站recyclebin中的对像还原？
+				SQL> flashback table cube_scope to before drop
+				表名可以是回收站系统的dba_recyclebin.object_name也可以是dba_recyclebin.original_name
+				但是此时问题来了，我已经用备份的DDL语句重建了一个新的表，这个时候再用此命令还原显然会报错，这个时候怎么办呢，只能还原成一个别名，具体操作命令是
+				SQL> flashback table cube_scope to before drop rename to cube_scope_old
+				既然恢复了删除前的表中数据，现在只能从cube_scope_old中的数据插入cube_scope中
+				SQL> insert into cube_scope select * from cube_scope_old t
+				成功恢复了数据，是不是可以收工了？没有，还有什么忘记做了？想想？
+				注意：如果将表drop掉，那么索引也被drop掉了，用这种方法把表找回来了，但是你的索引呢？你的约束呢？表恢复后一定要将表上的索引重建建立起来（切记），索引丢了最多影响性能，约束没了可能会造成业务数据混乱（一定要注意）
+			四、如何手工清除回收站中的对像？
+				SQL> purge table orabpel.cube_scope_old --清除具体的对像
+				注意：如果此时是DBA用户操作其它用户数据，清除回收站中的表时要加上用户名，否则报表不在回收站中
+				SQL> purge tablespace ORAPEL--清除指定的表空间对像
+				SQL> purge tablespace ORAPEL user orabpel --删除表空间指定用户下的所有对像
+				SQL> purge recyclebin--清空整个回收站
+			五、show recyclebin为什么没有数据呢？
+				首先们需要明白一点，recyclebin是user_recyclebin的同义词，如此你当前的登陆用户是system此时运用
+				show recyclebin是没有数据据的
+			六、如果同一对像多次删除怎么在recyclebin中识别？
+				dba_recyclebin中对每删除一个对像都会以BIN$进行命名，同时会有相应的dropscn、createtime、droptime可以跟据这些对像进行定位，然后进行恢复
+			七、ORACLE空间利用原则
+				1. 使用现有的表空间的未使用空间
+				2. 如果没有了空闲空间，则检查回收站，对于回收站的对象按照先进先出的原则，对于最先删除的对象，oracle在空间不足之时会最先从回收站删除以满足新分配空间的需求
+				3. 如果回收站也没有对象可以清理，则检查表空间是否自扩展，如果自扩展则扩展表空间，然后分配新空间
+				4.如果表空间非自扩展，或者已经不能自扩展(到达最大限制)，则直接报表空间不足错误，程序终止
+			八、DROP掉的对像是不是都会经过回收站？
+				以下几种drop不会将相关对像放进回收站recyclebin中
+				* drop tablespace :会将recyclebin中所有属于该tablespace的对像清除
+				* drop user ：会将recyclebin中所有属于该用户的对像清除
+				* drop cluster : 会将recyclebin中所有属于该cluster的成员对像清除
+				* drop type : 会将recyclebin中所有依赖该type对像清除
+				另外还需要注意一种情况，对像所在的表空间要有足够的空间，不然就算drop掉经过recyclebin由于空间不足oracle会自动删除的哦（切记）！
+	3.  關聯表update
+		update MACHAO_TEST2 a set a.COURSE=(select b.EMP_NAME from MACHAO_TEST b where a.EMP_NO=b.EMP_NO)
+	4.  Oracle 锁表与解锁表
 		1>  查询被锁的会话ID： select session_id from v$locked_object;
 		2>	查詢哪張表被鎖：
 			SELECT B.OWNER, B.OBJECT_NAME, A.SESSION_ID, A.LOCKED_MODE
 			FROM V$LOCKED_OBJECT A, DBA_OBJECTS B
 			WHERE B.OBJECT_ID = A.OBJECT_ID;
-        3>  查询上面会话的详细信息：SELECT sid, serial#, PADDR,username, osuser,MACHINE,PORT,PROGRAM,SQL_ADDRESS,SQL_ID FROM v$session  where sid = session_id ;
+		3>  查询上面会话的详细信息：SELECT sid, serial#, PADDR,username, osuser,MACHINE,PORT,PROGRAM,SQL_ADDRESS,SQL_ID FROM v$session  where sid = session_id ;
 			SELECT sid, serial#, PADDR,username, osuser,MACHINE,PORT,PROGRAM FROM v$session;
 		4>	查詢被鎖的會話所執行的sql: SELECT a.sid, a.serial#, a.PADDR,a.username, a.osuser,a.MACHINE，a.PORT,a.PROGRAM,b.SQL_FULLTEXT FROM v$session a v$sqlarea b where a.SQL_ID=b.SQL_ID a.sid = session_id ;
-        5>  将上面锁定的会话关闭： ALTER SYSTEM KILL SESSION 'sid,serial#';   【select  'ALTER SYSTEM KILL SESSION '''||sid||','||serial#||''';' from v$session where username='MWEB'】
-        6>  查看已經殺掉但是還沒有釋放的進程，注：該情況需要在操作系統kill
+		5>  将上面锁定的会话关闭： ALTER SYSTEM KILL SESSION 'sid,serial#';   【select  'ALTER SYSTEM KILL SESSION '''||sid||','||serial#||''';' from v$session where username='MWEB'】
+		6>  查看已經殺掉但是還沒有釋放的進程，注：該情況需要在操作系統kill
 			select session_id from v$locked_object;
 			select a.spid,b.sid,b.serial#,b.username from v$process a,v$session b where a.addr=b.paddr and b.status='KILLED';
 		7>	根據PID查詢消耗內存的sql 查詢select s.sid,s.serial# from v$session s,v$process p where s.paddr=p.addr and p.spid='9999';
-		
+
 		8>	使用alter system kill 之後沒有釋放的session ,在os 繼續殺
 			select a.SID,a.SERIAL#,a.STATUS,a.SERVER,a.PROCESS,a.PROGRAM,a.LOGON_TIME,b.PID,b.SPID,b.USERNAME,b.SERIAL# SERIAL,b.PROGRAM pgm,b.TRACEFILE FROM V$SESSION a left join V$process b on a.creator_addr=b.ADDR where a.STATUS='KILLED'
 			select 'kill -9 '||b.SPID from  v$session a,v$process b where  a.status='INACTIVE' and a.PADDR=b.ADDR and a.username='AQMS_AP';
@@ -37,15 +79,15 @@ oracle 異常處理
 		9>	windows 下殺掉spid 
 			cmd 下輸入orakill 實例名 SPID
 			
-    5.  修改安裝完 oracle 的 hostname 和 ip
-        1>  修改host 文件 vi /etc/hosts
-        2>  修改network 文件 (vi  /etc/sysconfig/network    NETWORKING=yes  HOSTNAME=XXX)
+	5.  修改安裝完 oracle 的 hostname 和 ip
+		1>  修改host 文件 vi /etc/hosts
+		2>  修改network 文件 (vi  /etc/sysconfig/network    NETWORKING=yes  HOSTNAME=XXX)
 		2>  修改ip vi /etc/sysconfig/network-script/ifcfg-網卡 service network restart
-    6.  REDO 文件損壞的處理以下幾種情況
-        1>  損壞的是已歸檔且inactive,重建redo 即可,不會丟失數據
-            alter database clear logfile group；
-            alter database open;
-        2>  損壞的是已歸檔且active或current 的redo 文件，在回復時，會丟失數據(已經commit 但是沒有寫到磁盤的數據會丟失)
+	6.  REDO 文件損壞的處理以下幾種情況
+		1>  損壞的是已歸檔且inactive,重建redo 即可,不會丟失數據
+			alter database clear logfile group；
+			alter database open;
+		2>  損壞的是已歸檔且active或current 的redo 文件，在回復時，會丟失數據(已經commit 但是沒有寫到磁盤的數據會丟失)
 			create pfile from spfile
 			vi  pfile   添加 *._allow_resetlogs_corruption=TRUE
 			create spfile from pfile
@@ -54,7 +96,7 @@ oracle 異常處理
 			cencel   
 			alter database open resetlogs;
 			select open_mode from v$database;			
-    7.  share pool 爆滿的解決辦法:错误原因：共享内存太小，存在一定碎片，没有有效的利用保留区，造成无法分配合适的共享区。
+	7.  share pool 爆滿的解決辦法:错误原因：共享内存太小，存在一定碎片，没有有效的利用保留区，造成无法分配合适的共享区。
 		1>  查看当前环境
 			SQL>show sga			　　
 			Total System Global Area　566812832 bytes
@@ -99,7 +141,7 @@ oracle 異常處理
 			----------------
 			dbms_lob
 			-- dbms_lob正是exp时申请保留区的对象
-		
+
 		3>  查看导致换页的应用
 			SQL> select * from x$ksmlru where ksmlrsiz>0;
 			ADDR　　 INDX　　INST_ID KSMLRCOM　　　         KSMLRSIZ　KSMLRNUM       KSMLRHON             KSMLROHV KSMLRSES　
@@ -113,7 +155,7 @@ oracle 異常處理
 			50001C64  7　　　　　1    library cache　　　         4192　　　　488                    EXU8VEW　                  2469165743 730C1C68
 			50001CA8  8　　　　　1    state objects　　　         4196　　　　 16                                  0 730C0B90
 			50001CEC  9　　　　　1    state objects　　　         4216　　　 3608                                   0 730D0838　
-		
+
 		4>  分析各共享池的使用情况
 			SQL> select KSPPINM,KSPPSTVL from x$ksppi,x$ksppcv
 			where x$ksppi.indx = x$ksppcv.indx and KSPPINM = '_shared_pool_reserved_min_alloc';　
@@ -137,7 +179,7 @@ oracle 異常處理
 			-- 9i的使用方法alter system set "_shared_pool_reserved_min_alloc"=4000 scope=spfile;
 			使用alter system flush shared_pool; (不能根本性的解决问题)
 			使用dbms_shared_pool.keep
-		
+
 		6>  由于数据库不能DOWN机，所以只能选择3)和4)
 			运行dbmspool.sql
 			SQL> @/home/oracle/products/8.1.7/rdbms/admin/dbmspool.sql
@@ -177,8 +219,7 @@ oracle 異常處理
 			建议：
 			由于以上解决的方法是在不能DOWN机的情况下，所以没能动态修改初始化参数，但问题的本质是共享区内存过小，需要增加shared pool，使用绑定变量，才能根本
 			的解决问题，所以需要在适当的时候留出DOWN机时间，对内存进行合理的配置。
-			
-    8.  游標超過系統設定值，ORA-01000: 超出打开游标的最大数
+	8.	游標超過系統設定值，ORA-01000: 超出打开游标的最大数	
 		1>  step 1: 查看数据库当前的游标数配置slqplus  /*+ rule*/
 			show parameter open_cursors;
 		2>  step 2:查看游标使用情况
@@ -187,8 +228,8 @@ oracle 異常處理
 			select o.sid, q.sql_text from v$open_cursor o, v$sql q where q.hash_value=o.hash_value and o.sid = 123;
 		4>  step 4:根据游标占用情况分析访问数据库的程序在资源释放上是否正常,如果程序释放资源没有问题，则加大游标数。
 			alter system set open_cursors=2000 scope=both;
-		5>	補充：createStatement和prepareStatement 放在java 代碼的循環外，且最終需要調用close() 的方法
-	9.  編譯存儲過程，顯示一直在執行中，查找被什麼進程佔用；
+
+	9.	編譯存儲過程，顯示一直在執行中，查找被什麼進程佔用；
 		1>  判斷 procedure 是否被鎖定；
 			SELECT * FROM V$DB_OBJECT_CACHE WHERE name='PROC_BG_MATERIAL_BAK' AND LOCKS!='0';
 		2>  查看是什麼session 佔用 procedure;		
@@ -202,14 +243,12 @@ oracle 異常處理
 		这就会导致跨用户之间的访问可能需要大量的授权语句。比如存储过程中的execute immediate语句，
 		如果直接将execute immediate里面的语句拉出来访问，是可以访问的，但在存储过程中执行就会报出权限不足的错误，
 		该解决方案是在存储过程的头部增加authid current_user is，该语句旨在给予其他用户（即非创建该存储过程的用户）使用该存储过程的权限。
-	11.分佈式報錯
+	11.	分佈式報錯
 		DBA_2PC_PENDING
 		Oracle会自动处理分布事务，保证分布事务的一致性，所有站点全部提交或全部回滚。一般情况下，处理过程在很短的时间内完成，根本无法察觉到。
 		但是，如果在commit或rollback的时候，出现了连接中断或某个数据库 站点CRASH的情况，则提交操作可能会无法继续，此时DBA_2PC_PENDING和DBA_2PC_NEIGHBORS中会包含尚未解决的分布事务。 对于绝大多数情况，当恢复连接或CRASH的数据库重新启动后，会自动解决分布式事务，不需要人工干预。只有分布事务锁住的对象急需被访问，锁住的回滚段阻止了其他事务的使用，网络故障或CRASH的数据库的恢复需要很长的时间等情况出现时，才使用人工操作的方式来维护分布式事务。 手工强制提交或回滚将失去二层提交的特性，Oracle无法继续保证事务的一致性，事务的一致性应由手工操作者保证
 		使用ALTER SYSTEM DISABLE DISTRIBUTED RECOVERY，可以使Oracle不再自动解决分布事务，即使网络恢复连接或者CRASH的数据库重新启动。
 		ALTER SYSTEM ENABLE DISTRIBUTED RECOVERY恢复自动解决分布事务。
-
-
 		Oracle解决异布lock的方法！
 		通常由于网络的不稳定或则数据库的 bug，在使用dblink时产生了异步lock，下面就谈谈异步lock的解决方法：
 		1）查询 dba_2pc_pending ，确定异步lock当前的状态。
@@ -220,8 +259,6 @@ oracle 異常處理
 		-------------|----------------------|---------|---|----------|-------
 		1.10.255     |V817REP.BE.ORACLE.COM.|committed|no |BE-ORACLE-|202241
 					 |89f6eafb.1.10.255     |         |   |NT/bel449 |
-
-
 		此时通过state=committed, 表示此session已提 交,只是在提交后，接受不到global session的transaction信息了,所以产生异步lock，此时对一般不造成table的lock。
 		通过调用 execute DBMS_TRANSACTION.PURGE_LOST_DB_ENTRY('1.10.255'）； 可解决此问题。
 		当然state还有以下几种状态：
@@ -289,9 +326,6 @@ oracle 異常處理
 		--------------------    --------- -------------------------     ------------------          ---
 		5.32.251             in                                                SYS                           N
 		5.32.251               out         PU_LINK.TEST.COM     SYS                           C
-
-		 
-
 		这时候就需要使用手动提交或回滚  commit或者rollback
 		根据state列的值prepared我们知道，orcl是prepared阶段，则solo肯定不能到commit阶段.
 		为了事务的一致性最好 rollback force '5.32.251';
@@ -303,10 +337,7 @@ oracle 異常處理
 		-------------             -------------------------------------------       -----------     ---   ----------     ----------
 		5.32.251               ORCL01.TEST.COM.8705ca3e.5.32. forced rollback  no    dg1
 									 251                                                      
-
-
 		DBMS_TRANSACTION.PURGE_LOST_DB_ENTRY('5.32.251');
-
 oracle 啟動文件類型管理
     1.	oracle 啟動階段所用到的文件；
         startup nomount         -> 这个阶段会打开并读取配置文件，从配置文件中获取控制文件的位置信息
@@ -566,6 +597,240 @@ oracle 工具類基本操作
 				
 			
 			
+	5.	固定sql执行计划
+		1)	outline (不使用的话直接drop 掉outline 即可；10g 之前使用、8i 引入)
+			[oracle@ora6 dbs]$ sqlplus / as sysdba
+			SQL*Plus: Release 11.2.0.4.0 Production on Tue Dec 22 10:23:20 2020
+			Copyright (c) 1982, 2013, Oracle.  All rights reserved.
+			Connected to:
+			Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+			With the Partitioning, OLAP, Data Mining and Real Application Testing options
+
+			SYS@test> conn cailamei
+			Enter password:
+			Connected.
+
+			CAILAMEI@test> create table outline_test_20201222 as select * from dba_objects;
+			Table created.
+
+			CAILAMEI@test> create index outline_test_idx on outline_test_20201222(OBJECT_NAME);
+			Index created.
+
+			CAILAMEI@test> set autot on;
+			CAILAMEI@test> select owner from outline_test_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222';
+
+			OWNER
+			------------------------------
+			CAILAMEI
+
+			Execution Plan
+			----------------------------------------------------------
+			Plan hash value: 655338988
+
+			-----------------------------------------------------------------------------------------------------
+			| Id  | Operation                   | Name                  | Rows  | Bytes | Cost (%CPU)| Time     |
+			-----------------------------------------------------------------------------------------------------
+			|   0 | SELECT STATEMENT            |                       |     1 |    83 |     4   (0)| 00:00:01 |
+			|   1 |  TABLE ACCESS BY INDEX ROWID| OUTLINE_TEST_20201222 |     1 |    83 |     4   (0)| 00:00:01 |
+			|*  2 |   INDEX RANGE SCAN          | OUTLINE_TEST_IDX      |     1 |       |     3   (0)| 00:00:01 |
+			-----------------------------------------------------------------------------------------------------
+
+			Predicate Information (identified by operation id):
+			---------------------------------------------------
+
+			2 - access("OBJECT_NAME"='OUTLINE_TEST_20201222')
+
+			Note
+			-----
+			- dynamic sampling used for this statement (level=2)
+
+
+			Statistics
+			----------------------------------------------------------
+			10  recursive calls
+			0  db block gets
+			69  consistent gets
+			0  physical reads
+			0  redo size
+			529  bytes sent via SQL*Net to client
+			524  bytes received via SQL*Net from client
+			2  SQL*Net roundtrips to/from client
+			0  sorts (memory)
+			0  sorts (disk)
+			1  rows processed
+
+			CAILAMEI@test> select /*+full(OUTLINE_TEST_20201222)*/owner from outline_test_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222';
+
+			OWNER
+			------------------------------
+			CAILAMEI
+
+
+			Execution Plan
+			----------------------------------------------------------
+			Plan hash value: 3952155143
+
+			-------------------------------------------------------------------------------------------
+			| Id  | Operation         | Name                  | Rows  | Bytes | Cost (%CPU)| Time     |
+			-------------------------------------------------------------------------------------------
+			|   0 | SELECT STATEMENT  |                       |     1 |    83 |   345   (1)| 00:00:05 |
+			|*  1 |  TABLE ACCESS FULL| OUTLINE_TEST_20201222 |     1 |    83 |   345   (1)| 00:00:05 |
+			-------------------------------------------------------------------------------------------
+
+			Predicate Information (identified by operation id):
+			---------------------------------------------------
+
+			1 - filter("OBJECT_NAME"='OUTLINE_TEST_20201222')
+
+			Note
+			-----
+			- dynamic sampling used for this statement (level=2)
+
+
+			Statistics
+			----------------------------------------------------------
+			10  recursive calls
+			0  db block gets
+			1302  consistent gets
+			1234  physical reads
+			0  redo size
+			529  bytes sent via SQL*Net to client
+			524  bytes received via SQL*Net from client
+			2  SQL*Net roundtrips to/from client
+			0  sorts (memory)
+			0  sorts (disk)
+			1  rows processed
+
+			CAILAMEI@test> set autot off;
+			CAILAMEI@test> create or replace outline 1_outline_test on select owner from outline_test_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222';
+			create or replace outline 1_outline_test on select owner from outline_test_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222'                         *
+			ERROR at line 1:
+			ORA-18000: invalid outline name
+
+			CAILAMEI@test> create or replace outline outline_test_1 on select owner from outline_test_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222';
+			Outline created.
+
+			CAILAMEI@test> create or replace outline outline_test_2 on select /*+full(OUTLINE_TEST_20201222)*/owner from outline_test_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222';
+			Outline created.
+
+			CAILAMEI@test> select name,owner,USED,SQL_TEXT from dba_outlines;
+
+			NAME               OWNER         USED      SQL_TEXT
+			----------------- --------------- --------- --------------------------------------------------------------------------------
+			OUTLINE_TEST_1      CAILAMEI        UNUSED    select owner from outline_test_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222
+			OUTLINE_TEST_2      CAILAMEI        UNUSED    select /*+full(OUTLINE_TEST_20201222)*/owner from outline_test_20201222 where OB
+
+			CAILAMEI@test> col name for a30;
+			CAILAMEI@test> col OWNER for a20
+			CAILAMEI@test> col HINT for a80
+			CAILAMEI@test> set linesize 600
+
+			CAILAMEI@test> select * from dba_outline_hints;
+			NAME                           OWNER                      NODE      STAGE   JOIN_POS HINT
+			------------------------------ -------------------- ---------- ---------- ---------- --------------------------------------------------------------------------------
+			OUTLINE_TEST_1                 CAILAMEI                      1          1          1 INDEX_RS_ASC(@"SEL$1" "OUTLINE_TEST_20201222"@"SEL$1" ("OUTLINE_TEST_20201222"."
+			OUTLINE_TEST_1                 CAILAMEI                      1          1          0 OUTLINE_LEAF(@"SEL$1")
+			OUTLINE_TEST_1                 CAILAMEI                      1          1          0 ALL_ROWS
+			OUTLINE_TEST_1                 CAILAMEI                      1          1          0 DB_VERSION('11.2.0.4')
+			OUTLINE_TEST_1                 CAILAMEI                      1          1          0 OPTIMIZER_FEATURES_ENABLE('11.2.0.4')
+			OUTLINE_TEST_1                 CAILAMEI                      1          1          0 IGNORE_OPTIM_EMBEDDED_HINTS
+			OUTLINE_TEST_2                 CAILAMEI                      1          1          1 FULL(@"SEL$1" "OUTLINE_TEST_20201222"@"SEL$1")
+			OUTLINE_TEST_2                 CAILAMEI                      1          1          0 OUTLINE_LEAF(@"SEL$1")
+			OUTLINE_TEST_2                 CAILAMEI                      1          1          0 ALL_ROWS
+			OUTLINE_TEST_2                 CAILAMEI                      1          1          0 DB_VERSION('11.2.0.4')
+			OUTLINE_TEST_2                 CAILAMEI                      1          1          0 OPTIMIZER_FEATURES_ENABLE('11.2.0.4')
+
+			NAME                           OWNER                      NODE      STAGE   JOIN_POS HINT
+			------------------------------ -------------------- ----------
+			---------- ---------- --------------------------------------------------------------------------------
+			OUTLINE_TEST_2                 CAILAMEI                      1          1          0 IGNORE_OPTIM_EMBEDDED_HINTS
+
+			12 rows selected.
+
+			CAILAMEI@test> select * from dba_outline_hints where join_pos=1;
+
+			NAME                           OWNER                      NODE      STAGE   JOIN_POS HINT
+			------------------------------ -------------------- ---------- ---------- ---------- --------------------------------------------------------------------------------
+			OUTLINE_TEST_1                 CAILAMEI                      1          1          1 INDEX_RS_ASC(@"SEL$1" "OUTLINE_TEST_20201222"@"SEL$1" ("OUTLINE_TEST_20201222"."
+			OUTLINE_TEST_2                 CAILAMEI                      1          1          1 FULL(@"SEL$1" "OUTLINE_TEST_20201222"@"SEL$1")                                                                                                                                                                                                                            VARCHAR2(1000)
+
+			CAILAMEI@test> update outln.OL$ set OL_NAME=decode(OL_NAME,'OUTLINE_TEST_1','OUTLINE_TEST_2','OUTLINE_TEST_2','OUTLINE_TEST_1') where OL_NAME in ('OUTLINE_TEST_1','OUTLINE_TEST_2');
+			2 rows updated.
+			CAILAMEI@test> commit;
+			Commit complete.
+
+			CAILAMEI@test> select name,owner,USED,SQL_TEXT from dba_outlines;
+
+			NAME                           OWNER                USED   SQL_TEXT
+			------------------------------ -------------------- ------ --------------------------------------------------------------------------------
+			OUTLINE_TEST_2                 CAILAMEI             UNUSED select owner from outline_test_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222
+			OUTLINE_TEST_1                 CAILAMEI             UNUSED select /*+full(OUTLINE_TEST_20201222)*/owner from outline_test_20201222 where OB
+
+			CAILAMEI@test> set autot on;
+			CAILAMEI@test> select * from dba_outline_hints where join_pos=1;
+
+			NAME                           OWNER                      NODE      STAGE   JOIN_POS HINT
+			------------------------------ -------------------- ---------- ---------- ---------- --------------------------------------------------------------------------------
+			OUTLINE_TEST_2                 CAILAMEI                      1          1          1 FULL(@"SEL$1" "OUTLINE_TEST_20201222"@"SEL$1")
+			OUTLINE_TEST_1                 CAILAMEI                      1          1          1 INDEX_RS_ASC(@"SEL$1" "OUTLINE_TEST_20201222"@"SEL$1" ("OUTLINE_TEST_20201222"."
+
+			CAILAMEI@test> select owner from outline_test_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222';
+			OWNER
+			--------------------
+			CAILAMEI
+
+			Execution Plan
+			----------------------------------------------------------
+			Plan hash value: 3952155143
+
+			-------------------------------------------------------------------------------------------
+			| Id  | Operation         | Name                  | Rows  | Bytes | Cost (%CPU)| Time     |
+			-------------------------------------------------------------------------------------------
+			|   0 | SELECT STATEMENT  |                       |  1031 | 85573 |   345   (1)| 00:00:05 |
+			|*  1 |  TABLE ACCESS FULL| OUTLINE_TEST_20201222 |  1031 | 85573 |   345   (1)| 00:00:05 |
+			-------------------------------------------------------------------------------------------
+
+			Predicate Information (identified by operation id):
+			---------------------------------------------------
+
+			1 - filter("OBJECT_NAME"='OUTLINE_TEST_20201222')
+
+			Note
+			-----
+			- outline "OUTLINE_TEST_2" used for this statement
+
+
+			Statistics
+			----------------------------------------------------------
+			59  recursive calls
+			147  db block gets
+			1310  consistent gets
+			1234  physical reads
+			624  redo size
+			529  bytes sent via SQL*Net to client
+			524  bytes received via SQL*Net from client
+			2  SQL*Net roundtrips to/from client
+			2  sorts (memory)
+			0  sorts (disk)
+			1  rows processed
+
+		2)	sql_profile（10g 之后）
+			1>	sql_profile 手动固定；
+				explain plan for select * from OUTLINE_TEST_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222';
+				select * from table(dbms_xplan.display(null,null,'outline'));
+				explain plan for select /*+ full(OUTLINE_TEST_20201222)*/* from OUTLINE_TEST_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222';
+				select * from table(dbms_xplan.display(null,null,'outline'));
+				
+				declare
+				v_hints sys.sqlprof_attr;
+				begin
+				v_hints :=sys.sqlprof_attr('FULL(@"SEL$1" "OUTLINE_TEST_20201222"@"SEL$1")');
+				dbms_sqltune.import_sql_profile(q'^select * from OUTLINE_TEST_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222'^',v_hints,'OUTLINE_TEST_20201222_profile',force_match=>true);
+				end;
+				/			
+				exec dbms_sqltune.drop_sql_profile('OUTLINE_TEST_20201222_profile'); -- 删除sql_profile
+			2>	sql_profile 使用STA 生成sql_profile；
+				
 			
 ORACLE 相關設置            
 	1.  .bash_profile  設置環境變量設置
@@ -617,6 +882,9 @@ ORACLE 相關設置
 			alter system set sga_max_size=83G scope=spfile;
 			alter system set sga_target=83G scope=spfile;
 			alter system set pga_aggregate_target=1G scope=spfile;
+			注：oracle 11g
+			若spfile 中只有sga_target 参数，则sga_max_size=sga_target 的值；
+			
 
 		2>  修改 memory
 			關機Remove the MEMORY_MAX_TARGET=0 and MEMORY_TARGET=0 lines.
@@ -625,6 +893,22 @@ ORACLE 相關設置
 		3>	OS kernel 參數設置
 			kernel.shmmax ：是核心参数中最重要的参数之一，用于定义单个共享内存段的最大值。
 			kernel.shmall ：该参数控制可以使用的共享内存的总页数。 Linux 共享内存页大小为 4KB, 共享内存段的大小都是共享内存页大小的整数倍。
+			下面专门说说kernel.sem：对应4个值
+			kernel.sem
+			SEMMSL、SEMMNS、SEMOPM、SEMMNI
+			SEMMSL: 每个信号集的最大信号数量
+			数据库最大 PROCESS 实例参数的设置值再加上 10 。
+			Oracle 建议将 SEMMSL 的值设置为不少于 100 。
+			SEMMNS：用于控制整个 Linux 系统中信号（而不是信号集）的最大数。
+			Oracle 建议将 SEMMNS 设置为：系统中每个数据库的 PROCESSES 实例参数设置值的总和，加上最大 PROCESSES 值的两倍，最后根据系统中 Oracle 数据库的数量，每个加 10 。
+			使用以下计算式来确定在 Linux 系统中可以分配的信号的最大数量。它将是以下两者中较小的一个值：SEMMNS 或 (SEMMSL * SEMMNI)
+
+			SEMOPM： 内核参数用于控制每个 semop 系统调用可以执行的信号操作的数量。semop 系统调用（函数）提供了利用一个 semop 系统调用完成多项信号操作的功能。一个信号集能够拥有每个信号集中最大数量的SEMMSL 信号，因此建议设置 SEMOPM 等于SEMMSL 。
+			Oracle 建议将 SEMOPM 的值设置为不少于 100 。
+			SEMMNI ：内核参数用于控制整个 Linux 系统中信号集的最大数量。
+			Oracle 建议将 SEMMNI 的值设置为不少于 100 。
+
+设计完这些之后可以 sysctl -p 生效，剩下可以配置AMM.
 	8.  並發session 和processors 的設置（修改processes和sessions值必须重启Oracle服务器才能生效）sessions=(1.1*process+5)
 		1>  SQL>show parameter processes;
 			SQL>show parameter sessions ;
@@ -855,9 +1139,7 @@ oracle 查看修改DB相關命令
 		7>	查看並創建序列
 			create sequence aaa increment by 1 start with 1;
 			select aaa.nextval from dual;
-			select aaa.currval from dual;
-			
-		
+			select aaa.currval from dual;	
 	5.	表分區
 		1>  select * FROM dba_tables where owner='SFISM4' and partitioned='YES'		
 	6.  表空間相關
@@ -1507,6 +1789,23 @@ oracle decode函数和case声明
 	   10>	最重要一点：case执行速度比decode更优秀
 find ./ -mtime +5 |xargs rm -rf
 cat /etc/filebeat/filebeat.yml | egrep -v '#|^$'
-ssh -R 1880:9.190.26.244:80 racv-l402聽聽聽聽聽聽聽聽聽聽聽聽 杞彂yum repo鍦板潃 
+ssh -R 1880:9.190.26.244:80 racv-l402 --把9.190.26.244:80 转发到racv-l402 的1880 端口
 :%s/old_pattern/new_pattern/g
 ssh -R anyport:yumserver:80 dest-host             转发yum repo地址
+
+
+declare
+my_sqltext clob;
+my_sqltext :='select /*+no_index(OUTLINE_TEST_20201222 OUTLINE_TEST_IDX)*/ * from OUTLINE_TEST_20201222 where OBJECT_NAME='OUTLINE_TEST_20201222'';
+my_task_name :=dbms_sqltune.create_tuning_task(
+sql_text=>my_sqltext,
+user_name=>'CAILAMEI',
+scope=>'COMPREHENSIVE',
+time_limit=>
+
+
+)
+
+10.62.170.196  10.62.170.197
+10.67.51.164 yum 80
+在10.62.170.196 上 执行 ssh -R 1880:10.67.51.164:80 10.62.170.197 即可让197 访问yum 源；

@@ -1,0 +1,204 @@
+
+
+Centos6下关于系统用户密码规则
+
+随着linux使用的普遍，对于linux用户以及系统的安全要求越来越高，而用户密码复杂程度是系统安全性高低的首要体现。因此如何对linux下用户的密码进行规则限制，以保证用户必须使用复杂的密码，杜绝用户随意使用简单的密码，从而提高用户的安全性和系统的安全性。下面就不做过多赘述，直接以centos6版本为例进行介绍：
+
+1）用户密码策略
+Linux系统下的用户密码的有效期,是否可以修改密码可以通过login.defs文件控制。
+
+[root@bastion-IDC ~]# cat /etc/login.defs|grep -v "^#"|grep -v "^$"
+MAIL_DIR	/var/spool/mail
+PASS_MAX_DAYS	99999
+PASS_MIN_DAYS	0
+PASS_MIN_LEN	5
+PASS_WARN_AGE	7
+UID_MIN			  500
+UID_MAX			60000
+GID_MIN			  500
+GID_MAX			60000
+CREATE_HOME	yes
+UMASK           077
+USERGROUPS_ENAB yes
+ENCRYPT_METHOD SHA512 
+
+上述文件中的重要参数表示：
+PASS_MAX_DAYS   99999     密码的最大有效期, 99999:永久有期  
+PASS_MIN_DAYS   0         是否可修改密码,0表示可修改,非0表示多少天后可修改 
+PASS_MIN_LEN    5         密码最小长度,但是使用pam_cracklib.so模块后,该参数不再有效（这个参考下面密码复杂度规则设定）  
+PASS_WARN_AGE   7         密码失效前多少天在用户登录时通知用户修改密码
+
+2）用户密码复杂度规则设定，需要通过/etc/pam.d/system-auth文件实施（针对的是普通用户状态下修改密码会生效，root用户状态下无效），centos6中默认是通过pam_cracklib.so模块控制：
+
+[root@bastion-IDC ~]# cat /etc/redhat-release
+CentOS release 6.8 (Final)
+  
+[root@bastion-IDC ~]# vim /etc/pam.d/system-auth
+将文件中的下面两行：
+password    requisite     pam_cracklib.so try_first_pass retry=3 type=
+password    sufficient    pam_unix.so sha512 shadow nullok try_first_pass use_authtok
+改为：
+password    requisite     pam_cracklib.so try_first_pass retry=3 type= minlen=8 ucredit=-2 lcredit=-4 dcredit=-1 ocredit=-1
+password    sufficient    pam_unix.so md5 shadow nullok try_first_pass use_authtok remember=5
+  
+上面文件中参数分别说明设置密码的时候要遵循下面的规则：
+retry=3       定义登录/修改密码失败时，可以重试的次数；
+type=xxx      当添加/修改密码时，系统给出的缺省提示符是什么，用来修改缺省的密码提示文本。默认是不修改的，如上例。
+minlen=8      定义用户密码的最小长度为8位
+ucredit=-2    定义用户密码中最少有2个大写字母    （数字为负数，表示至少有多少个大写字母；数字为正数，表示至多有多少个大写字母；下面同理）
+lcredit=-4    定义用户密码中最少有4个小写字母
+dcredit=-1    定义用户密码中最少有1个数字
+ocredit=-1    定义用户密码中最少有1个特殊字符（除数字、字母之外）
+remember=5    修改用户密码时最近5次用过的旧密码就不能重用了
+----------------------------------------------------------------------------
+除了上面的几个参数，还可以设定下面的参数规则
+difok=N       此选项用来规定新密码中必需有N个字符与旧密码不同。如果新密码中有1/2以上的字符与旧密码不同时，该新密码就会被接受。
+difignore=N   此选项用来设定在difok之前收到多少个字符时，difok设置会被忽略，缺省为23。
+minclass=N    此选项用来规定新密码中的字符类别的最小数目，字符一般有四种类别：数字、大写字母、小写字母，以及特殊字符。
+
+
+温馨提示：login.defs文件和/etc/pam.d/system-auth文件的规则设置对非root用户起作用，在root用户下则不会生效！如果设置root用户密码过期时间等，需要用change命令进行设置。示例如下：
+
+如下密码规则设置：
+1）密码有效期是3个月。即用户创建180天后强制要求修改密码。
+2）密码至少要过了5天后才能修改。
+3）密码最小长度是12位
+4）密码到期前的7天，用户登录时会提醒修改密码
+
+5）密码输入时最多可允许尝试输入3次密码，3次不成功则退出密码输入界面。
+6）新密码中至少包括大写字母2位、小写字母至少2位，数字至少2位，特殊字符至少2位
+7）新密码中必须有4个字符与老密码不同
+8）修改用户密码时最近3次用过的旧密码就不能重用了
+
+则前4个密码规则的配置：
+[root@pinpoint-server ~]# vim /etc/login.defs
+......
+PASS_MAX_DAYS   180
+PASS_MIN_DAYS   5
+PASS_MIN_LEN    12
+PASS_WARN_AGE   7
+
+后4个密码规则的配置：
+[root@pinpoint-server ~]# vim /etc/pam.d/system-auth
+......
+password    requisite     pam_cracklib.so try_first_pass retry=3 type= minlen=12 ucredit=-2 lcredit=-2 dcredit=-2 ocredit=-2 difok=4
+password    sufficient    pam_unix.so md5 shadow nullok try_first_pass use_authtok remember=3
+password    required      pam_deny.so
+
+在root账号下修改密码，测试以上密码规则设置后是否有效？
+如下操作，说明以上设置在root账号下无效
+[root@pinpoint-server ~]# echo "123456"|passwd --stdin grace
+Changing password for user grace.
+passwd: all authentication tokens updated successfully.
+
+那么切换到非root账号下修改密码试试？
+[grace@pinpoint-server ~]$ passwd 
+Changing password for user grace.
+Changing password for grace.
+(current) UNIX password:         #输入当前密码123456
+New password:                    #设置新密码shibo@2018，不符合密码规则
+BAD PASSWORD: is too simple
+New password:                    #设置新密码kevin@201b，不符合密码规则
+BAD PASSWORD: is too simple
+New password:                    #设置新密码KeVI@2#8!w02，不符合密码规则
+Retype new password: 
+passwd: all authentication tokens updated successfully.
+
+说明以上的密码规则设置在非root用户下是生效的！！
+
+3）Linux账户期限设定
+Linux系统下可以使用chage命令是用来修改帐号和密码的有效期限。
+
+需求场景：
+公司给客户开的ftp账户用于下载报社新闻稿件。这个是付费的，账户有时间限制。若是合同到期了，客户想续约，就需要给这个ftp账户做延期。
+
+注意下面修改账户有效期限的命令：
+# chage -l username   查看系统账户的当前设置
+# chage -M 600 fzwb_word   修改fzwb_word账户密码的有效天数为600天。过了这个天数，账户密码无效
+# chage -E "Jun 16, 2016" fzwb_word  设定fzwb_word账户的具体到期时间。过了这个日期，账户就无效。默认是never  （fzwb_word为ftp的账户账户）
+
+注意：
+chage -M  针对的是账户密码过期时间。
+chage -E  这个命令针对的是账户过期时间
+
+设定账户过期时间，除了使用chage -E命令，还可以使用usermod -e命令
+# usermod -e "Jun 16, 2016" fzwb_word   设定fzwb_word账户的具体到期时间。默认是never  （fzwb_word为ftp的账户账户）
+
+下面命令查看， fzwb_word 这个账户的时间到 2015 年 6 月 10 号就到期了！！
+修改为 2016 月 6 月 16 号到期！
+[root@hlweb80 ~]# chage -l fzwb_word
+Minimum: 0
+Maximum: 99999
+Warning: 7
+Inactive: -1
+Last Change: Jun 15, 2012
+Password Expires: Never
+Password Inactive: Never
+Account Expires: Jun 10, 2015
+
+[root@hlweb80 ~]# usermod -e "Jun 16, 2016" fzwb_word
+[root@hlweb80 ~]# chage -l fzwb_word
+Minimum: 0
+Maximum: 99999
+Warning: 7
+Inactive: -1
+Last Change: Jun 15, 2012
+Password Expires: Never
+Password Inactive: Never
+Account Expires: Jun 16, 2016
+
+--------------------------------------------------------------------------------
+可以使用chage命令来手动修改账户的相关属性：
+格式：chage [选项] 账户名
+
+[选项]
+-m：密码可更改的最小天数。为零时代表任何时候都可以更改密码。 
+-M：密码保持有效的最大天数。 
+-w：账户密码到期前，提前收到警告信息的天数。 
+-E：帐号到期的日期。过了这天，此帐号将不可用。 
+-d：上一次更改的日期。 
+-i：停滞时期。如果一个密码已过期这些天，那么此帐号将不可用。 
+-l：例出当前的设置。由非特权账户来确定他们的密码或帐号何时过期。
+
+实例如下：
+[root@linux-node1 ~]# chage -l wangshibo
+Last password change          : Mar 09, 2017       //账户创建时间
+Password expires          : Aug 30, 2022           //账户密码过期时间
+Password inactive         : never
+Account expires           : never                 //账户过期时间
+Minimum number of days between password change    : 0
+Maximum number of days between password change    : 2000
+Number of days of warning before password expires : 7
+
+[root@linux-node1 ~]# usermod -e "Jun 16, 2018" wangshibo
+
+[root@linux-node1 ~]# chage -l wangshibo
+Last password change          : Mar 09, 2017
+Password expires          : Aug 30, 2022
+Password inactive         : never
+Account expires           : Jun 16, 2018                       
+Minimum number of days between password change    : 0
+Maximum number of days between password change    : 2000
+Number of days of warning before password expires : 7
+
+[root@linux-node1 ~]# chage -M 20 wangshibo
+
+[root@linux-node1 ~]# chage -l wangshibo
+Last password change          : Mar 09, 2017
+Password expires          : Mar 29, 2017         
+Password inactive         : never
+Account expires           : Jun 16, 2018
+Minimum number of days between password change    : 0
+Maximum number of days between password change    : 20
+Number of days of warning before password expires : 7
+
+[root@linux-node1 ~]# chage -E "Jun 2, 2020" wangshibo
+
+[root@linux-node1 ~]# chage -l wangshibo
+Last password change          : Mar 09, 2017
+Password expires          : Mar 29, 2017
+Password inactive         : never
+Account expires           : Jun 02, 2020
+Minimum number of days between password change    : 0
+Maximum number of days between password change    : 20
+Number of days of warning before password expires : 7
