@@ -1,0 +1,9 @@
+[DEFAULT]
+BASEURL=https://docs.jumpserver.org/zh/master/admin-guide/quick_start/
+[{000214A0-0000-0000-C000-000000000046}]
+Prop3=19,11
+[InternetShortcut]
+IDList=
+URL=https://docs.jumpserver.org/zh/master/admin-guide/quick_start/#_4
+IconFile=https://docs.jumpserver.org/zh/master/img/facio.ico
+IconIndex=1

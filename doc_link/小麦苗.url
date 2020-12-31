@@ -1,0 +1,9 @@
+[DEFAULT]
+BASEURL=https://share.weiyun.com/57HUxNi
+[{000214A0-0000-0000-C000-000000000046}]
+Prop3=19,11
+[InternetShortcut]
+IDList=
+URL=https://share.weiyun.com/57HUxNi
+IconFile=https://img.weiyun.com/vipstyle/nr/box/img/favicon.ico?max_age=31536000
+IconIndex=1
