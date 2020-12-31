@@ -421,3 +421,30 @@ total 101588
 -rw-r----- 1 oracle oinstall     1536 Nov  5  2016 orapwpcasdb
 -rw-r----- 1 oracle oinstall     1536 May  2  2018 orapwpcasdb1
 -rw-r----- 1 oracle oinstall     1536 Nov  5  2016 orapwpcasdb1.bak
+
+
+[root@stjpcasdb01 rules.d]# more 99-oracle-asmdevices.rules
+KERNEL=="dm-*",ENV{DM_UUID}=="mpath-360002ac000000000000000140001b14a",OWNER="grid",GROUP="asmadmin",MODE="0660"
+KERNEL=="dm-*",ENV{DM_UUID}=="mpath-360002ac000000000000000130001b14a",OWNER="grid",GROUP="asmadmin",MODE="0660"
+KERNEL=="dm-*",ENV{DM_UUID}=="mpath-360002ac000000000000000120001b14a",OWNER="grid",GROUP="asmadmin",MODE="0660"
+KERNEL=="dm-*",ENV{DM_UUID}=="mpath-360002ac000000000000000180001b14a",OWNER="grid",GROUP="asmadmin",MODE="0660"
+KERNEL=="dm-*",ENV{DM_UUID}=="mpath-360002ac000000000000000170001b14a",OWNER="grid",GROUP="asmadmin",MODE="0660"
+KERNEL=="dm-*",ENV{DM_UUID}=="mpath-360002ac000000000000000150001b14a",OWNER="grid",GROUP="asmadmin",MODE="0660"
+KERNEL=="dm-*",ENV{DM_UUID}=="mpath-360002ac000000000000000160001b14a",OWNER="grid",GROUP="asmadmin",MODE="0660"
+
+
+
+虛擬機 共享磁盤
+[root@rac01 ~]# more /etc/udev/rules.d/99-oracle-asmdevices.rules
+KERNEL=="sd*", ENV{DEVTYPE}=="disk", SUBSYSTEM=="block", PROGRAM=="/usr/lib/udev/scsi_id --whitelisted --replace-whitespace --device=/dev/$name", RESULT=="36000c29c52
+4fe9733523941438c8a14c", SYMLINK+="asmdisk/OCRDISK01", OWNER="grid", GROUP="asmadmin", MODE="0660", OPTIONS="nowatch"
+KERNEL=="sd*", ENV{DEVTYPE}=="disk", SUBSYSTEM=="block", PROGRAM=="/usr/lib/udev/scsi_id --whitelisted --replace-whitespace --device=/dev/$name", RESULT=="36000c29808
+402da37831f2ae0c117bea", SYMLINK+="asmdisk/OCRDISK02", OWNER="grid", GROUP="asmadmin", MODE="0660", OPTIONS="nowatch"
+KERNEL=="sd*", ENV{DEVTYPE}=="disk", SUBSYSTEM=="block", PROGRAM=="/usr/lib/udev/scsi_id --whitelisted --replace-whitespace --device=/dev/$name", RESULT=="36000c29a3d
+423820114ebf75f40ea2bf", SYMLINK+="asmdisk/OCRDISK03", OWNER="grid", GROUP="asmadmin", MODE="0660", OPTIONS="nowatch"
+KERNEL=="sd*", ENV{DEVTYPE}=="disk", SUBSYSTEM=="block", PROGRAM=="/usr/lib/udev/scsi_id --whitelisted --replace-whitespace --device=/dev/$name", RESULT=="36000c29df6
+76627cf88a5693c16e0028", SYMLINK+="asmdisk/FRADISK01", OWNER="grid", GROUP="asmadmin", MODE="0660", OPTIONS="nowatch"
+KERNEL=="sd*", ENV{DEVTYPE}=="disk", SUBSYSTEM=="block", PROGRAM=="/usr/lib/udev/scsi_id --whitelisted --replace-whitespace --device=/dev/$name", RESULT=="36000c296e5
+f009ca693d59c6f543a3e1", SYMLINK+="asmdisk/DBDISK01", OWNER="grid", GROUP="asmadmin", MODE="0660", OPTIONS="nowatch"
+KERNEL=="sd*", ENV{DEVTYPE}=="disk", SUBSYSTEM=="block", PROGRAM=="/usr/lib/udev/scsi_id --whitelisted --replace-whitespace --device=/dev/$name", RESULT=="36000c2939a
+88887c0cb376efc2803bf9", SYMLINK+="asmdisk/DBDISK02", OWNER="grid", GROUP="asmadmin", MODE="0660", OPTIONS="nowatch"
