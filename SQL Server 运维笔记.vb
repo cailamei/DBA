@@ -132,14 +132,8 @@
 		DECLARE authors_cursor CURSOR FOR  Select [name]   from sysobjects where xtype='u' order by id
 		OPEN authors_cursor
 		FETCH NEXT FROM authors_cursor  INTO @name
-		WHILE @@FETCH_STATUS = 0 
+		WHILE @@FETCH_STATUS = 0  
 		BEGIN    
 		DBCC DBREINDEX (@name, '', 90)
 		FETCH NEXT FROM authors_cursor     INTO @name
 		ENDdeallocate authors_cursor
-		
-		
-		改了？
-下午 04:46
-https://mp.weixin.qq.com/s?__biz=MzIzOTA2NjEzNQ==&mid=2454777711&idx=1&sn=772d1e6c074a93c951838695e4855314&chksm=fe8b8217c9fc0b01d16f4d7ab3bdea9040f7907bea46c04fcf79d9b6498285e4cb7c221e0467&scene=21#wechat_redirect 
-下午 04:47

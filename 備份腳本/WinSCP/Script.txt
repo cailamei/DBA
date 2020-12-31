@@ -1,0 +1,10 @@
+open sftp://user:password@example.com/
+put examplefile.txt /home/user/
+exit
+
+winscp.com /script=example.txt
+
+winscp.com /command "open sftp://root:foxconn168!@10.134.44.119/" "put winscp.ini /etc/winscp.ini" "exit"
+winscp.com /command "open sftp://dbadmin:Foxconn&*(&*(@10.67.50.163/" "put winscp.ini /winscp.ini" "exit"
+winscp.com /command "open sftp://root:foxconn168!@10.134.44.133/" "get /root/filebeat-6.2.3-windows-x86_64.zip D:\Applications\WinSCPPortable\" "exit"
+winscp.com /command "open sftp://root:foxconn168!@10.134.44.133/" "get /root/winlogbeat-6.2.3-windows-x86_64.zip D:\Applications\WinSCPPortable\" "exit"

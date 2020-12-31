@@ -1,0 +1,8 @@
+open 10.67.50.162
+ftpuser
+ftpuser
+lcd d:\run\ftp
+cd \Backup\EPDVFoxedm_10.67.51.53
+binary
+put "Foxedm_backup*"
+bye

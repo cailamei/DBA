@@ -1,0 +1,423 @@
+     ┌────────────────────────────────────────────────────────────────────┐
+     │                ‧ MobaXterm Personal Edition v20.1 ‧                │
+     │              (X server, SSH client and network tools)              │
+     │                                                                    │
+     │ ? Your computer drives are accessible through the /drives path     │
+     │ ? Your DISPLAY is set to 10.67.124.147:0.0                         │
+     │ ? When using SSH, your remote DISPLAY is automatically forwarded   │
+     │ ? Each command status is specified by a special symbol (? or ?)    │
+     │                                                                    │
+     │ ‧ Important:                                                       │
+     │ This is MobaXterm Personal Edition. The Professional edition       │
+     │ allows you to customize MobaXterm for your company: you can add    │
+     │ your own logo, your parameters, your welcome message and generate  │
+     │ either an MSI installation package or a portable executable.       │
+     │ We can also modify MobaXterm or develop the plugins you need.      │
+     │ For more information: https://mobaxterm.mobatek.net/download.html  │
+     └────────────────────────────────────────────────────────────────────┘
+
+  31/12/2020   08:51.41   /home/mobaxterm  ssh dbadmin@10.67.51.173
+Warning: Permanently added '10.67.51.173' (RSA) to the list of known hosts.
+dbadmin@10.67.51.173's password:
+Last login: Thu Oct 15 15:30:11 2020 from tjcesit-069.cesbg.foxconn
+[dbadmin@stjpcasdb01 ~]$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sdac5      255G   54G  189G  23% /
+tmpfs            32G  293M   32G   1% /dev/shm
+/dev/sdac1      194M   35M  150M  19% /boot
+/dev/sdac3      4.0G  139M  3.7G   4% /tmp
+[dbadmin@stjpcasdb01 ~]$ lsblk
+NAME           MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINT
+sda              8:0    0     2G  0 disk
+└─OCR1 (dm-0)  253:0    0     2G  0 mpath
+sdb              8:16   0     2G  0 disk
+└─OCR2 (dm-1)  253:1    0     2G  0 mpath
+sde              8:64   0     5G  0 disk
+└─REDO2 (dm-2) 253:2    0     5G  0 mpath
+sdd              8:48   0     5G  0 disk
+└─REDO1 (dm-3) 253:3    0     5G  0 mpath
+sdc              8:32   0     2G  0 disk
+└─OCR3 (dm-4)  253:4    0     2G  0 mpath
+sdf              8:80   0   300G  0 disk
+└─DATA2 (dm-5) 253:5    0   300G  0 mpath
+sdg              8:96   0   300G  0 disk
+└─DATA1 (dm-6) 253:6    0   300G  0 mpath
+sdi              8:128  0     2G  0 disk
+└─OCR2 (dm-1)  253:1    0     2G  0 mpath
+sdh              8:112  0     2G  0 disk
+└─OCR1 (dm-0)  253:0    0     2G  0 mpath
+sdk              8:160  0     5G  0 disk
+└─REDO1 (dm-3) 253:3    0     5G  0 mpath
+sdj              8:144  0     2G  0 disk
+└─OCR3 (dm-4)  253:4    0     2G  0 mpath
+sdac            65:192  0 278.9G  0 disk
+├─sdac1         65:193  0   200M  0 part  /boot
+├─sdac2         65:194  0  15.7G  0 part  [SWAP]
+├─sdac3         65:195  0     4G  0 part  /tmp
+├─sdac4         65:196  0     1K  0 part
+└─sdac5         65:197  0   259G  0 part  /
+sdo              8:224  0     2G  0 disk
+└─OCR1 (dm-0)  253:0    0     2G  0 mpath
+sdl              8:176  0     5G  0 disk
+└─REDO2 (dm-2) 253:2    0     5G  0 mpath
+sdq             65:0    0     2G  0 disk
+└─OCR3 (dm-4)  253:4    0     2G  0 mpath
+sdm              8:192  0   300G  0 disk
+└─DATA2 (dm-5) 253:5    0   300G  0 mpath
+sdp              8:240  0     2G  0 disk
+└─OCR2 (dm-1)  253:1    0     2G  0 mpath
+sdr             65:16   0     5G  0 disk
+└─REDO1 (dm-3) 253:3    0     5G  0 mpath
+sds             65:32   0     5G  0 disk
+└─REDO2 (dm-2) 253:2    0     5G  0 mpath
+sdn              8:208  0   300G  0 disk
+└─DATA1 (dm-6) 253:6    0   300G  0 mpath
+sdu             65:64   0   300G  0 disk
+└─DATA1 (dm-6) 253:6    0   300G  0 mpath
+sdt             65:48   0   300G  0 disk
+└─DATA2 (dm-5) 253:5    0   300G  0 mpath
+sdw             65:96   0     2G  0 disk
+└─OCR2 (dm-1)  253:1    0     2G  0 mpath
+sdv             65:80   0     2G  0 disk
+└─OCR1 (dm-0)  253:0    0     2G  0 mpath
+sdaa            65:160  0   300G  0 disk
+└─DATA2 (dm-5) 253:5    0   300G  0 mpath
+sdz             65:144  0     5G  0 disk
+└─REDO2 (dm-2) 253:2    0     5G  0 mpath
+sdy             65:128  0     5G  0 disk
+└─REDO1 (dm-3) 253:3    0     5G  0 mpath
+sdx             65:112  0     2G  0 disk
+└─OCR3 (dm-4)  253:4    0     2G  0 mpath
+sdab            65:176  0   300G  0 disk
+└─DATA1 (dm-6) 253:6    0   300G  0 mpath
+[dbadmin@stjpcasdb01 ~]$
+[dbadmin@stjpcasdb01 ~]$ sudo su -
+[root@stjpcasdb01 ~]# df -h
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sdac5      255G   54G  189G  23% /
+tmpfs            32G  293M   32G   1% /dev/shm
+/dev/sdac1      194M   35M  150M  19% /boot
+/dev/sdac3      4.0G  139M  3.7G   4% /tmp
+[root@stjpcasdb01 ~]# su - oracle
+[oracle@stjpcasdb01 ~]$ lsnrctl status
+
+LSNRCTL for Linux: Version 11.2.0.4.0 - Production on 31-DEC-2020 08:53:32
+
+Copyright (c) 1991, 2013, Oracle.  All rights reserved.
+
+Connecting to (ADDRESS=(PROTOCOL=tcp)(HOST=)(PORT=1521))
+STATUS of the LISTENER
+------------------------
+Alias                     LISTENER
+Version                   TNSLSNR for Linux: Version 11.2.0.4.0 - Production
+Start Date                14-FEB-2020 17:31:58
+Uptime                    320 days 15 hr. 21 min. 34 sec
+Trace Level               off
+Security                  ON: Local OS Authentication
+SNMP                      OFF
+Listener Parameter File   /u01/app/11.2.0.4/grid/network/admin/listener.ora
+Listener Log File         /u01/app/grid/diag/tnslsnr/stjpcasdb01/listener/alert/log.xml
+Listening Endpoints Summary...
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=ipc)(KEY=LISTENER)))
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=10.67.51.173)(PORT=1521)))
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=10.67.51.174)(PORT=1521)))
+Services Summary...
+Service "+ASM" has 1 instance(s).
+  Instance "+ASM1", status READY, has 1 handler(s) for this service...
+Service "pcasdb" has 1 instance(s).
+  Instance "pcasdb1", status READY, has 1 handler(s) for this service...
+Service "pcasdbXDB" has 1 instance(s).
+  Instance "pcasdb1", status READY, has 1 handler(s) for this service...
+The command completed successfully
+[oracle@stjpcasdb01 ~]$ echo $ORACLE_HOME
+/u01/app/database/11.2.0.4/product
+[oracle@stjpcasdb01 ~]$ echo $ORACLE_BASE
+/u01/app/database
+[oracle@stjpcasdb01 ~]$ more /u01/app/database/11.2.0.4/product/network/admin/tnsnames.ora
+# tnsnames.ora Network Configuration File: /u01/app/database/11.2.0.4/product/network/admin/tnsnames.ora
+# Generated by Oracle configuration tools.
+PCASDB =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = stjpcasdbrac-scan)(PORT = 1600))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = pcasdb)
+    )
+  )
+
+PCASDBDG =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = 10.67.51.180)(PORT = 1600))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = pcasdb)
+#       (SID = pcasdb)
+    )
+  )
+
+PCASDBRAC1 =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = 10.67.51.174)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = pcasdb)
+      (INSTANCE_NAME = pcasdb1)
+  )
+  )
+
+
+PCASDBRAC2 =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = 10.67.51.176)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = pcasdb)
+      (INSTANCE_NAME = pcasdb2)
+    )
+  )
+[oracle@stjpcasdb01 ~]$ more /u01/app/database/11.2.0.4/product/network/admin/
+samples/      shrept.lst    tnsnames.ora
+[oracle@stjpcasdb01 ~]$ logout
+[root@stjpcasdb01 ~]# su - grid
+[grid@stjpcasdb01 ~]$ lsnrctl status
+
+LSNRCTL for Linux: Version 11.2.0.4.0 - Production on 31-DEC-2020 08:55:10
+
+Copyright (c) 1991, 2013, Oracle.  All rights reserved.
+
+Connecting to (DESCRIPTION=(ADDRESS=(PROTOCOL=IPC)(KEY=LISTENER)))
+STATUS of the LISTENER
+------------------------
+Alias                     LISTENER
+Version                   TNSLSNR for Linux: Version 11.2.0.4.0 - Production
+Start Date                14-FEB-2020 17:31:58
+Uptime                    320 days 15 hr. 23 min. 11 sec
+Trace Level               off
+Security                  ON: Local OS Authentication
+SNMP                      OFF
+Listener Parameter File   /u01/app/11.2.0.4/grid/network/admin/listener.ora
+Listener Log File         /u01/app/grid/diag/tnslsnr/stjpcasdb01/listener/alert/log.xml
+Listening Endpoints Summary...
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=ipc)(KEY=LISTENER)))
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=10.67.51.173)(PORT=1521)))
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=10.67.51.174)(PORT=1521)))
+Services Summary...
+Service "+ASM" has 1 instance(s).
+  Instance "+ASM1", status READY, has 1 handler(s) for this service...
+Service "pcasdb" has 1 instance(s).
+  Instance "pcasdb1", status READY, has 1 handler(s) for this service...
+Service "pcasdbXDB" has 1 instance(s).
+  Instance "pcasdb1", status READY, has 1 handler(s) for this service...
+The command completed successfully
+[grid@stjpcasdb01 ~]$ echo ORACLE_HOME
+ORACLE_HOME
+[grid@stjpcasdb01 ~]$ echo $ORACLE_HOME
+/u01/app/11.2.0.4/grid
+[grid@stjpcasdb01 ~]$ echo $ORACLE_BASE
+/u01/app/grid
+[grid@stjpcasdb01 ~]$
+[grid@stjpcasdb01 ~]$ lsnrctl status
+
+LSNRCTL for Linux: Version 11.2.0.4.0 - Production on 31-DEC-2020 09:02:51
+
+Copyright (c) 1991, 2013, Oracle.  All rights reserved.
+
+Connecting to (DESCRIPTION=(ADDRESS=(PROTOCOL=IPC)(KEY=LISTENER)))
+STATUS of the LISTENER
+------------------------
+Alias                     LISTENER
+Version                   TNSLSNR for Linux: Version 11.2.0.4.0 - Production
+Start Date                14-FEB-2020 17:31:58
+Uptime                    320 days 15 hr. 30 min. 52 sec
+Trace Level               off
+Security                  ON: Local OS Authentication
+SNMP                      OFF
+Listener Parameter File   /u01/app/11.2.0.4/grid/network/admin/listener.ora
+Listener Log File         /u01/app/grid/diag/tnslsnr/stjpcasdb01/listener/alert/log.xml
+Listening Endpoints Summary...
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=ipc)(KEY=LISTENER)))
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=10.67.51.173)(PORT=1521)))
+  (DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=10.67.51.174)(PORT=1521)))
+Services Summary...
+Service "+ASM" has 1 instance(s).
+  Instance "+ASM1", status READY, has 1 handler(s) for this service...
+Service "pcasdb" has 1 instance(s).
+  Instance "pcasdb1", status READY, has 1 handler(s) for this service...
+Service "pcasdbXDB" has 1 instance(s).
+  Instance "pcasdb1", status READY, has 1 handler(s) for this service...
+The command completed successfully
+[grid@stjpcasdb01 ~]$ more /u01/app/11.2.0.4/grid/network/admin/listener.ora
+LISTENER=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=IPC)(KEY=LISTENER))))            # line added by Agent
+LISTENER_SCAN1=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=IPC)(KEY=LISTENER_SCAN1))))                # line added by Agent
+ENABLE_GLOBAL_DYNAMIC_ENDPOINT_LISTENER_SCAN1=ON                # line added by Agent
+ENABLE_GLOBAL_DYNAMIC_ENDPOINT_LISTENER=ON              # line added by Agent
+[grid@stjpcasdb01 ~]$ more /u01/app/11.2.0.4/grid/network/admin/
+endpoints_listener.ora        listener.ora                  samples/                      sqlnet.ora
+listener1608145PM3635.bak     listener.ora.bak.stjpcasdb01  shrept.lst
+[grid@stjpcasdb01 ~]$ more /u01/app/11.2.0.4/grid/network/admin/sqlnet.ora
+# sqlnet.ora.stjpcasdb01 Network Configuration File: /u01/app/11.2.0.4/grid/network/admin/sqlnet.ora.stjpcasdb01
+# Generated by Oracle configuration tools.
+
+NAMES.DIRECTORY_PATH= (TNSNAMES, EZCONNECT)
+
+ADR_BASE = /u01/app/grid
+
+[grid@stjpcasdb01 ~]$ cd $ORACLE_HOME/dbs
+[grid@stjpcasdb01 dbs]$ ll
+total 16
+-rw-rw---- 1 grid oinstall 2810 Feb 14  2020 ab_+ASM1.dat
+-rw-rw---- 1 grid oinstall 1544 Dec 31 05:14 hc_+ASM1.dat
+-rw-r--r-- 1 grid oinstall 2851 May 15  2009 init.ora
+-rw-r----- 1 grid oinstall 1536 Aug 14  2016 orapw+ASM
+[grid@stjpcasdb01 dbs]$ more orapw+ASM
+
+
+?a
+[grid@stjpcasdb01 dbs]$ logout
+[root@stjpcasdb01 ~]# su - oracle
+[oracle@stjpcasdb01 ~]$ cd $ORACLE_HOME/dbs
+[oracle@stjpcasdb01 dbs]$ ll
+total 101588
+-rw------- 1 root   oinstall  7860224 Jul 19  2018 core.100152
+-rw------- 1 root   oinstall  7860224 Jul 19  2018 core.100429
+-rw------- 1 root   oinstall  7938048 Jul 19  2018 core.102630
+-rw------- 1 root   oinstall  9527296 Jul 19  2018 core.103175
+-rw------- 1 root   oinstall  7925760 Jul 19  2018 core.103260
+-rw------- 1 root   oinstall  7995392 Jul 19  2018 core.103542
+-rw------- 1 root   oinstall  7860224 Jul 18  2018 core.164093
+-rw------- 1 root   oinstall  7794688 Jul 18  2018 core.168042
+-rw------- 1 root   oinstall  7925760 Jul 18  2018 core.179783
+-rw------- 1 root   oinstall 10493952 Jul 20  2018 core.70800
+-rw------- 1 root   oinstall 43331584 Jul 20  2018 core.70985
+-rw------- 1 root   oinstall  7876608 Jul 19  2018 core.91917
+-rw------- 1 root   oinstall  7929856 Jul 19  2018 core.97486
+-rw------- 1 root   oinstall  7864320 Jul 19  2018 core.97648
+-rw-rw---- 1 oracle asmadmin     1544 Dec 31 05:15 hc_pcasdb1.dat
+-rw-r--r-- 1 oracle oinstall     2851 May 15  2009 init.ora
+-rw-r----- 1 oracle oinstall       39 Aug 16  2016 initpcasdb1.ora
+-rw-r----- 1 oracle oinstall     1536 Nov  5  2016 orapwpcasdb
+-rw-r----- 1 oracle oinstall     1536 May  2  2018 orapwpcasdb1
+-rw-r----- 1 oracle oinstall     1536 Nov  5  2016 orapwpcasdb1.bak
+[oracle@stjpcasdb01 dbs]$ more
+[oracle@stjpcasdb01 dbs]$ more initpcasdb1.ora
+SPFILE='+DATA/pcasdb/spfilepcasdb.ora'
+[oracle@stjpcasdb01 dbs]$ sqlplus / as sysdba
+
+SQL*Plus: Release 11.2.0.4.0 Production on Thu Dec 31 09:06:46 2020
+
+Copyright (c) 1982, 2013, Oracle.  All rights reserved.
+
+
+Connected to:
+Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+With the Partitioning, Real Application Clusters, Automatic Storage Management, OLAP,
+Data Mining and Real Application Testing options
+
+SYS @ pcasdb1 > create pfile from spfile;
+
+File created.
+
+SYS @ pcasdb1 > exit
+Disconnected from Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production
+With the Partitioning, Real Application Clusters, Automatic Storage Management, OLAP,
+Data Mining and Real Application Testing options
+[oracle@stjpcasdb01 dbs]$ ll
+total 101588
+-rw------- 1 root   oinstall  7860224 Jul 19  2018 core.100152
+-rw------- 1 root   oinstall  7860224 Jul 19  2018 core.100429
+-rw------- 1 root   oinstall  7938048 Jul 19  2018 core.102630
+-rw------- 1 root   oinstall  9527296 Jul 19  2018 core.103175
+-rw------- 1 root   oinstall  7925760 Jul 19  2018 core.103260
+-rw------- 1 root   oinstall  7995392 Jul 19  2018 core.103542
+-rw------- 1 root   oinstall  7860224 Jul 18  2018 core.164093
+-rw------- 1 root   oinstall  7794688 Jul 18  2018 core.168042
+-rw------- 1 root   oinstall  7925760 Jul 18  2018 core.179783
+-rw------- 1 root   oinstall 10493952 Jul 20  2018 core.70800
+-rw------- 1 root   oinstall 43331584 Jul 20  2018 core.70985
+-rw------- 1 root   oinstall  7876608 Jul 19  2018 core.91917
+-rw------- 1 root   oinstall  7929856 Jul 19  2018 core.97486
+-rw------- 1 root   oinstall  7864320 Jul 19  2018 core.97648
+-rw-rw---- 1 oracle asmadmin     1544 Dec 31 05:15 hc_pcasdb1.dat
+-rw-r--r-- 1 oracle oinstall     2851 May 15  2009 init.ora
+-rw-r----- 1 oracle oinstall     1956 Dec 31 09:06 initpcasdb1.ora
+-rw-r----- 1 oracle oinstall     1536 Nov  5  2016 orapwpcasdb
+-rw-r----- 1 oracle oinstall     1536 May  2  2018 orapwpcasdb1
+-rw-r----- 1 oracle oinstall     1536 Nov  5  2016 orapwpcasdb1.bak
+[oracle@stjpcasdb01 dbs]$ more initpcasdb1.ora
+pcasdb1.__db_cache_size=9428795392
+pcasdb2.__db_cache_size=13723762688
+pcasdb1.__java_pool_size=100663296
+pcasdb2.__java_pool_size=100663296
+pcasdb1.__large_pool_size=134217728
+pcasdb2.__large_pool_size=134217728
+pcasdb1.__oracle_base='/u01/app/database'#ORACLE_BASE set from environment
+pcasdb2.__oracle_base='/u01/app/database'#ORACLE_BASE set from environment
+pcasdb1.__pga_aggregate_target=6308233216
+pcasdb2.__pga_aggregate_target=6308233216
+pcasdb1.__sga_target=16777216000
+pcasdb2.__sga_target=16777216000
+pcasdb1.__shared_io_pool_size=0
+pcasdb2.__shared_io_pool_size=536870912
+pcasdb1.__shared_pool_size=7012876288
+pcasdb2.__shared_pool_size=2113929216
+pcasdb1.__streams_pool_size=0
+pcasdb2.__streams_pool_size=67108864
+*.archive_lag_target=1800
+*.audit_file_dest='/u01/app/database/admin/pcasdb/adump'
+*.audit_trail='NONE'
+*.cluster_database=true
+*.compatible='11.2.0.4.0'
+*.control_files='+DATA/pcasdb/control01.ctl','+DATA/pcasdb/control02.ctl'
+*.db_block_size=8192
+*.db_domain=''
+*.db_name='pcasdb'
+*.diagnostic_dest='/u01/app/database'
+*.dispatchers='(PROTOCOL=TCP) (SERVICE=pcasdbXDB)'
+pcasdb1.instance_number=1
+pcasdb2.instance_number=2
+*.log_archive_config='DG_CONFIG=(pcasdb,pcasdbdg)'
+*.log_archive_dest_1='location=+data/arch1'
+pcasdb1.log_archive_dest_1='location=+data/arch1'
+pcasdb2.log_archive_dest_1='location=+data/arch2'
+pcasdb1.log_archive_dest_2='service=pcasdbdg lgwr async valid_for=(online_logfiles,primary_role) db_unique_name=pcasdbdg'
+pcasdb2.log_archive_dest_2='service=pcasdbdg lgwr async valid_for=(online_logfiles,primary_role) db_unique_name=pcasdbdg'
+*.log_archive_dest_state_2='ENABLE'
+*.open_cursors=300
+*.pga_aggregate_target=6291456000
+*.processes=800
+*.remote_listener='stjpcasdbrac-scan:1600'
+*.remote_login_passwordfile='exclusive'
+*.sessions=885
+*.sga_target=16777216000
+*.standby_file_management='AUTO'
+pcasdb2.thread=2
+pcasdb1.thread=1
+pcasdb1.undo_tablespace='UNDOTBS1'
+pcasdb2.undo_tablespace='UNDOTBS2'
+[oracle@stjpcasdb01 dbs]$ ll
+total 101588
+-rw------- 1 root   oinstall  7860224 Jul 19  2018 core.100152
+-rw------- 1 root   oinstall  7860224 Jul 19  2018 core.100429
+-rw------- 1 root   oinstall  7938048 Jul 19  2018 core.102630
+-rw------- 1 root   oinstall  9527296 Jul 19  2018 core.103175
+-rw------- 1 root   oinstall  7925760 Jul 19  2018 core.103260
+-rw------- 1 root   oinstall  7995392 Jul 19  2018 core.103542
+-rw------- 1 root   oinstall  7860224 Jul 18  2018 core.164093
+-rw------- 1 root   oinstall  7794688 Jul 18  2018 core.168042
+-rw------- 1 root   oinstall  7925760 Jul 18  2018 core.179783
+-rw------- 1 root   oinstall 10493952 Jul 20  2018 core.70800
+-rw------- 1 root   oinstall 43331584 Jul 20  2018 core.70985
+-rw------- 1 root   oinstall  7876608 Jul 19  2018 core.91917
+-rw------- 1 root   oinstall  7929856 Jul 19  2018 core.97486
+-rw------- 1 root   oinstall  7864320 Jul 19  2018 core.97648
+-rw-rw---- 1 oracle asmadmin     1544 Dec 31 05:15 hc_pcasdb1.dat
+-rw-r--r-- 1 oracle oinstall     2851 May 15  2009 init.ora
+-rw-r----- 1 oracle oinstall     1956 Dec 31 09:06 initpcasdb1.ora
+-rw-r----- 1 oracle oinstall     1536 Nov  5  2016 orapwpcasdb
+-rw-r----- 1 oracle oinstall     1536 May  2  2018 orapwpcasdb1
+-rw-r----- 1 oracle oinstall     1536 Nov  5  2016 orapwpcasdb1.bak

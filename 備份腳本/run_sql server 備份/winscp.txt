@@ -1,0 +1,10 @@
+option echo off
+option batch off
+option confirm off
+option transfer binary
+open sftpuser:sftpuser@10.67.50.162
+lcd d:\run\ftp
+cd \Backup\eHR_10.67.50.100
+put "*_backup*"
+close
+bye

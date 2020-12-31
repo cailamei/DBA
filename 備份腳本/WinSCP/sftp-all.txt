@@ -1,0 +1,12 @@
+open sftp://sftpuser:sftpuser@10.134.103.136/
+synchronize remote -filemask="*>=7D" D:\FTP_DB\Backup\CABGL6SFC_10.67.70.86\ /from163/CABGL6SFC_10.67.70.86/
+synchronize remote -filemask="*>=7D" D:\FTP_DB\Backup\HWAPDB_10.67.70.93\ /from163/HWAPDB_10.67.70.93/
+synchronize remote -filemask="*>=7D" D:\FTP_DB\Backup\EPO_10.67.49.26\ /from163/EPO_10.67.49.26/
+synchronize remote -filemask="*>=7D" D:\FTP_DB\Backup\EPDIDB_10.67.74.72\ /from163/EPDIDB_10.67.74.72/
+synchronize remote -filemask="*>=7D" D:\FTP_DB\Backup\EPDVISFC_10.67.74.87\ /from163/EPDVISFC_10.67.74.87/
+synchronize remote -filemask="*>=7D" D:\FTP_DB\Backup\CABGL6BIG_10.67.70.175\ /from163/CABGL6BIG_10.67.70.175/
+synchronize remote -filemask="*>=7D" D:\FTP_DB\Backup\CESHRM_10.67.51.120\ /from163/CESHRM_10.67.51.120/
+synchronize remote -filemask="*>=7D" D:\FTP_DB\Backup\flownet_10.67.51.120\ /from163/flownet_10.67.51.120/
+synchronize remote -filemask="*>=7D" D:\FTP_DB\Backup\agile9_10.67.39.15\ /from163/agile9_10.67.39.15/
+exit
+
