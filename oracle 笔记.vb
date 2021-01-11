@@ -1188,29 +1188,78 @@ oracle 查看修改DB相關命令
 			select TABLESPACE_NAME from dba_data_files where FILE_NAME='数据文件全路径';
 		4>  查看临时表空间的数据文件对应的临时表空间
 			select TABLESPACE_NAME from dba_temp_files where FILE_NAME='数据文件全路径';
-	8.	oracle 日期函數
-		select to_char(sysdate, 'yyyy') 年,
-		to_char(sysdate, 'mm') 月,
-		to_char(sysdate, 'DD') 日,
-		to_char(sysdate, 'HH24') 时,
-		to_char(sysdate, 'MI') 分,
-		to_char(sysdate, 'SS') 秒,
-		to_char(sysdate, 'DAY') 天,
-		to_char(sysdate, 'Q') 第几季度,
-		to_char(sysdate, 'W') 当月第几周,
-		to_char(sysdate, 'WW') 当年第几周,
-		to_char(sysdate, 'D') 当周第几天,
-		to_char(sysdate, 'DDD') 当年第几天    
-		from dual;
-		
-		select decode(200, 100, 100, '200', '200', '300') from dual;
-		select trunc(sysdate) from dual;2020-10-08 00:00:00 -- 截取至年月日，時分秒用0補齊
-		select round(to_date('2020-10-08 12:30:59','yyyy-mm-dd hh24:mi:ss')) from dual;2020-10-09 00:00:00 -- syadate 當天超過12點，則結果值為後一天的年月日：00：00:00
-		select trunc(sysdate,'MONTH') from dual;--2020-10-01 00:00:00 --截取到月
-		select trunc(sysdate,'YEAR') from dual;--截取到年2020-01-01 00:00:00
-		select round(sysdate,'MONTH') from dual; 2020-10-01 00:00:00
-		select round(sysdate,'YEAR') from dual;2021-01-01 00:00:00
-		*** alter   session set NLS_DATE_LANGUAGE = American;***
+	8.	oracle 常用函數
+		1>	常用日期函数
+			select to_char(sysdate, 'yyyy') 年,
+			to_char(sysdate, 'mm') 月,
+			to_char(sysdate, 'DD') 日,
+			to_char(sysdate, 'HH24') 时,
+			to_char(sysdate, 'MI') 分,
+			to_char(sysdate, 'SS') 秒,
+			to_char(sysdate, 'DAY') 天,
+			to_char(sysdate, 'Q') 第几季度,
+			to_char(sysdate, 'W') 当月第几周,
+			to_char(sysdate, 'WW') 当年第几周,
+			to_char(sysdate, 'D') 当周第几天,
+			to_char(sysdate, 'DDD') 当年第几天    
+			from dual;			
+			select decode(200, 100, 100, '200', '200', '300') from dual;
+			select trunc(sysdate) from dual;2020-10-08 00:00:00 -- 截取至年月日，時分秒用0補齊
+			select round(to_date('2020-10-08 12:30:59','yyyy-mm-dd hh24:mi:ss')) from dual;2020-10-09 00:00:00 -- syadate 當天超過12點，則結果值為後一天的年月日：00：00:00
+			select trunc(sysdate,'MONTH') from dual;--2020-10-01 00:00:00 --截取到月
+			select trunc(sysdate,'YEAR') from dual;--截取到年2020-01-01 00:00:00
+			select round(sysdate,'MONTH') from dual; 2020-10-01 00:00:00
+			select round(sysdate,'YEAR') from dual;2021-01-01 00:00:00
+		2>	常用分析函数
+			<1>	first_value()和last_value() 取首尾记录值。
+				select
+				dept_id
+				,sale_date
+				,goods_type
+				,sale_cnt
+				,first_value(sale_date) over (partition by dept_id order by sale_date) first_value
+				,last_value(sale_date) over (partition by dept_id order by sale_date desc) last_value
+				from criss_sales;
+
+				注：last_value()默认统计范围是 rows between unbounded preceding and current row
+
+				select
+				dept_id,
+				sale_date
+				goods_type,
+				sale_cnt,
+				first_value(sale_date) over (partition by dept_id order by sale_date) first_value, -- 取第一个值
+				last_value(sale_date) over (partition by dept_id order by sale_date desc) last_value, --取当前值
+				last_value(sale_date) over (partition by dept_id order by sale_date rows between unbounded preceding and unbounded following) last_value_all  -- 取最大值
+				from criss_sales;
+			<2>	sql 四大排名函数(ROW_NUMBER、RANK、DENSE_RANK、NTILE(不做研究))
+				select row_number() over(order by score desc) rn,score,name from clm_test;
+				rn		score	name
+				------	-------	--------------
+				1		90		chensen
+				2		85		cailamei
+				3		85		yangfei
+				4		80		chenyoulin
+				5		70		laji
+				
+				select rank() over(order by score desc) rn,score,name from clm_test;
+				rn		score	name
+				------	-------	--------------
+				1		90		chensen
+				2		85		cailamei
+				2		85		yangfei
+				4		80		chenyoulin
+				5		70		laji
+				
+				select DENSE_RANK() over(order by score desc) rn,score,name from clm_test;
+				rn		score	name
+				------	-------	--------------
+				1		90		chensen
+				2		85		cailamei
+				2		85		yangfei
+				3		80		chenyoulin
+				4		70		laji
+				
 	9.	oracle 參數設置(動態&靜態) 
 		select distinct ISSYS_MODIFIABLE from v$parameter；
 		IMMEDIATE --動態參數
